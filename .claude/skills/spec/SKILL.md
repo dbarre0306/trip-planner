@@ -66,5 +66,6 @@ Branch: <branch_name>
 Spec file: \_specs/<feature_slug>.md
 Title: <feature_title>
 
-Do not repeat the full spec in the chat output unless the user explicitly asks to see it. The main goal is to save the spec file and report where it lives and what branch name to use. Do NOT give the user any
-multiple choice options to plan the spec.
+Do not repeat the full spec in the chat output unless the user explicitly asks to see it. The main goal is to save the spec file and report where it lives and what branch name to use.
+
+Do NOT ask: "Claude has written up a plan and is ready to execute. Would you like to proceed?"
