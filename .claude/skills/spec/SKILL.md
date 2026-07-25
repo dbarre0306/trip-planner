@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Glob, Bash(git switch:*)
 disable-model-invocation: true
 ---
 
-You are helping to create up a new feature spec for this application, from a short idea provided in the user input below. Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
+You are helping to create a new feature spec for this application, from a short idea provided in the user input below. Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
 
 User input: $ARGUMENTS
 
@@ -16,7 +16,7 @@ Your job will be to turn the user input above into:
 
 - A human friendly feature title in kebab-case (e.g. hr-employee-table)
 - A safe git branch name not already taken (e.g. claude/feature/hr-employee-table)
-- A detailed markdown spec file under the \_specs/ directory
+- A detailed markdown spec file under the _specs/ directory
 
 Then save the spec file to disk and print a short summary of what you did.
 
@@ -52,20 +52,25 @@ If you cannot infer a sensible `feature_title` and `feature_slug`, ask the user 
 
 ## Step 3. Switch to a new Git branch
 
-Before making any content, switch to a new Git branch using the `branch_name` derived from the `$ARGUMENTS`. If the branch name is already taken, then append a version number to it: e.g. `claude/feature/card-component-01`
+Before making any content, switch to a new Git branch using the `branch_name` derived from the `$ARGUMENTS`. If the branch name is already taken, then append a version number to it: e.g. `claude/feature/card-component-01`. If the `git switch` command fails for any other reason (e.g. not a git repository, detached HEAD), stop, tell the user the exact error, and do not proceed to the remaining steps.
 
 ## Step 4. Draft the spec content
 
-Create a markdown spec document that Plan mode can use directly and save it in the \_specs folder using the `feature_slug`. Use the exact structure as defined in the spec template file here: @\_specs/template.md. Do not add technical implementation details such as code examples.
+Create a markdown spec document that Plan mode can use directly and save it in the _specs folder using the `feature_slug`. Use the exact structure as defined in the spec template file here: @_specs/template.md. Do not add technical implementation details such as code examples. If the template file is missing or its structure is unclear, stop and tell the user instead of guessing at a structure.
 
 ## Step 5. Final output to the user
 
 After the file is saved, respond to the user with a short summary in this exact format:
 
 Branch: <branch_name>
-Spec file: \_specs/<feature_slug>.md
+Spec file: _specs/<feature_slug>.md
 Title: <feature_title>
 
 Do not repeat the full spec in the chat output unless the user explicitly asks to see it. The goal is to save the spec file and report where it lives and what branch name to use.
 
-Regardless of the mode, do NOT ask: "Claude has written up a plan and is ready to execute. Would you like to proceed?" Always automatically save the specification file.
+Step 5 is the last step of this skill. This skill produces one deliverable — the saved spec file (and the new git branch) — and nothing else. It is not a plan awaiting approval to implement. Once the summary above is printed, stop:
+
+- Do not ask, in any wording, whether to proceed, implement, or execute the spec (e.g. "Would you like me to proceed?", "Should I start implementing this?", "Ready to execute — proceed?"). This applies in every mode, including Plan Mode.
+- Do not call the `ExitPlanMode` tool from this skill, even if Plan Mode is active. Writing and saving the spec file is an explicit exception to Plan Mode's edit restrictions for this skill — it is the action this skill exists to perform, not a plan to be approved.
+- Always automatically save the specification file regardless of mode.
+- Do not take any further action or ask any follow-up question.
