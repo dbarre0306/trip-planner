@@ -5,3 +5,6 @@ class VenueCandidate(BaseModel):
     interest: str | None = None
     address: str | None = None
     tag: str | None = None
+
+class VenueCandidates(BaseModel):
+    candidates: list[VenueCandidate]
