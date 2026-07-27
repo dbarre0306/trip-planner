@@ -13,6 +13,7 @@ def test_get_all_candidates_queries_once_per_interest(mock_search_places):
         start_date="09/01/2026",
         num_days=3,
         num_adults=2,
+        num_children=0,
         interests=["hiking trails", "restaurants"],
     )
 
@@ -33,6 +34,7 @@ def test_get_all_candidates_combines_results_across_interests(mock_search_places
         start_date="09/01/2026",
         num_days=3,
         num_adults=2,
+        num_children=0,
         interests=["hiking trails", "restaurants"],
     )
 
@@ -53,6 +55,7 @@ def test_create_itinerary_processes_all_candidates_in_one_call(mock_search_place
         start_date="09/01/2026",
         num_days=3,
         num_adults=2,
+        num_children=0,
         interests=["hiking trails", "restaurants"],
     )
 
@@ -74,6 +77,7 @@ def test_create_itinerary_prints_processed_venues(mock_search_places, mock_proce
         start_date="09/01/2026",
         num_days=3,
         num_adults=2,
+        num_children=0,
         interests=["hiking"],
     )
 
@@ -93,6 +97,7 @@ def test_create_itinerary_reports_processing_failures(mock_search_places, mock_p
         start_date="09/01/2026",
         num_days=3,
         num_adults=2,
+        num_children=0,
         interests=["hiking"],
     )
 

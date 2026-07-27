@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from enum import Enum
 
 class CategoryId(Enum):
@@ -7,18 +8,10 @@ class CategoryId(Enum):
     ENTERTAINMENT = "entertainment"
     OTHER = "other"
 
+@dataclass(frozen=True)
 class Category:
-    def __init__(self, id: CategoryId, label: str):
-        self._id = id
-        self._label = label
-
-    @property
-    def id(self) -> CategoryId:
-        return self._id
-
-    @property
-    def label(self) -> str:
-        return self._label
+    id: CategoryId
+    label: str
 
 CATEGORIES = [
     Category(CategoryId.FOOD, "Food & Drinks"),
@@ -28,24 +21,11 @@ CATEGORIES = [
     Category(CategoryId.OTHER, "Other"),
 ]
 
+@dataclass(frozen=True)
 class Interest:
-    def __init__(self, query: str, label: str, category_id: CategoryId):
-        self._query = query
-        self._label = label
-        self._category_id = category_id
-
-    @property
-    def query(self) -> str:
-        return self._query
-
-    @property
-    def label(self) -> str:
-        return self._label
-
-    @property
-    def category_id(self) -> CategoryId:
-        return self._category_id
-
+    query: str
+    label: str
+    category_id: CategoryId
 
 INTERESTS = [
     # Food
@@ -73,36 +53,11 @@ INTERESTS = [
 ]
 
 
+@dataclass(frozen=True)
 class TravelInfo:
-    def __init__(self, destination: str, start_date: str, num_days: int, num_adults: int, num_children: int = 0, interests: list[str] = []):
-        self._destination = destination
-        self._start_date = start_date
-        self._num_days = num_days
-        self._num_adults = num_adults
-        self._num_children = num_children
-        self._interests = interests
-
-    @property
-    def destination(self) -> str:
-        return self._destination
-
-    @property
-    def start_date(self) -> str:
-        return self._start_date
-
-    @property
-    def num_days(self) -> int:
-        return self._num_days
-
-    @property
-    def num_adults(self) -> int:
-        return self._num_adults
-
-    @property
-    def num_children(self) -> int:
-        return self._num_children
-
-    @property
-    def interests(self) -> list[str]:
-        return self._interests
-
+    destination: str
+    start_date: str
+    num_days: int
+    num_adults: int
+    num_children: int = 0
+    interests: list[str] = field(default_factory=list)

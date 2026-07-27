@@ -7,7 +7,7 @@ SERPER_SEARCH_URL = "https://google.serper.dev/search"
 _REQUEST_TIMEOUT_SECONDS = 5
 
 
-@dataclass
+@dataclass(frozen=True)
 class VenueLookupResult:
     url: str | None = None
     notes: list[str] = field(default_factory=list)
