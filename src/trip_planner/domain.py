@@ -61,15 +61,48 @@ INTERESTS = [
     Interest("live music", "Live music & nightlife", CategoryId.ENTERTAINMENT),
     Interest("shows", "Shows & performances", CategoryId.ENTERTAINMENT),
     Interest("amusement parks", "Amusement parks", CategoryId.ENTERTAINMENT),
-    Interest("family activities", "Family activities", CategoryId.ENTERTAINMENT),
 
     # Outdoors
     Interest("hiking", "Hiking", CategoryId.OUTDOORS),
     Interest("beaches", "Beaches", CategoryId.OUTDOORS),
+    Interest("scenic views", "Scenic views", CategoryId.OUTDOORS),
 
     # Other
     Interest("shopping", "Shopping", CategoryId.OTHER),
-    Interest("scenic views", "Scenic views", CategoryId.OTHER),
     Interest("wellness", "Wellness & relaxation", CategoryId.OTHER),
 ]
+
+
+class TravelInfo:
+    def __init__(self, destination: str, start_date: str, num_days: int, num_adults: int, num_children: int = 0, interests: list[str] = []):
+        self._destination = destination
+        self._start_date = start_date
+        self._num_days = num_days
+        self._num_adults = num_adults
+        self._num_children = num_children
+        self._interests = interests
+
+    @property
+    def destination(self) -> str:
+        return self._destination
+
+    @property
+    def start_date(self) -> str:
+        return self._start_date
+
+    @property
+    def num_days(self) -> int:
+        return self._num_days
+
+    @property
+    def num_adults(self) -> int:
+        return self._num_adults
+
+    @property
+    def num_children(self) -> int:
+        return self._num_children
+
+    @property
+    def interests(self) -> list[str]:
+        return self._interests
 

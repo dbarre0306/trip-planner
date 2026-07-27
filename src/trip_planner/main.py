@@ -5,6 +5,8 @@ import warnings
 from datetime import datetime
 
 from trip_planner.crew import TripPlanner
+from trip_planner.domain import TravelInfo
+from trip_planner.trip_planner import create_itinerary
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -23,7 +25,16 @@ def run():
     }
 
     try:
-        TripPlanner().crew().kickoff(inputs=inputs)
+        travel_info = TravelInfo(
+            destination = "Tucson, AZ",
+            start_date = "09/01/2026",
+            num_days = 3,
+            num_adults = 2,
+            num_children = 0,
+            interests = ["hiking trails", "restaurants"]
+        )
+        #TripPlanner().crew().kickoff(inputs=inputs)
+        create_itinerary(travel_info)
     except Exception as e:
         raise Exception(f"An error occurred while running the crew: {e}")
 
