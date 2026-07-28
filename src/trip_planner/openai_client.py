@@ -1,8 +1,10 @@
 import os
+from functools import lru_cache
 
 from openai import OpenAI
 
 
+@lru_cache(maxsize=1)
 def get_client() -> OpenAI:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -10,6 +12,7 @@ def get_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
+@lru_cache(maxsize=1)
 def get_model() -> str:
     model = os.environ.get("MODEL")
     if not model:
