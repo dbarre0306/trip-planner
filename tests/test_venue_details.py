@@ -11,13 +11,14 @@ from trip_planner.venue_details import (
 @patch("trip_planner.venue_details.chat_completion")
 def test_extract_venue_details_uses_street_address(mock_chat_completion):
     mock_chat_completion.return_value = (
-        '{"location": "1234 Canyon Rd, Tucson, AZ", "hours_of_operation": null, '
-        '"duration_minutes": null}'
+        '{"location": "1234 Canyon Rd, Tucson, AZ", "location_type": "STREET_ADDRESS", '
+        '"hours_of_operation": null, "duration_minutes": null}'
     )
 
     result = extract_venue_details("The Moonstone", ["Located at 1234 Canyon Rd, Tucson, AZ"])
 
     assert result.location == "1234 Canyon Rd, Tucson, AZ"
+    assert result.location_type == "STREET_ADDRESS"
     prompt = mock_chat_completion.call_args[0][0][0]["content"]
     assert "1234 Canyon Rd" in prompt
     assert "The Moonstone" in prompt
@@ -26,8 +27,8 @@ def test_extract_venue_details_uses_street_address(mock_chat_completion):
 @patch("trip_planner.venue_details.chat_completion")
 def test_extract_venue_details_falls_back_to_distinct_place(mock_chat_completion):
     mock_chat_completion.return_value = (
-        '{"location": "Sabino Canyon Recreation Area", "hours_of_operation": null, '
-        '"duration_minutes": null}'
+        '{"location": "Sabino Canyon Recreation Area", "location_type": "PLACE", '
+        '"hours_of_operation": null, "duration_minutes": null}'
     )
 
     result = extract_venue_details(
@@ -35,28 +36,48 @@ def test_extract_venue_details_falls_back_to_distinct_place(mock_chat_completion
     )
 
     assert result.location == "Sabino Canyon Recreation Area"
+    assert result.location_type == "PLACE"
 
 
 @patch("trip_planner.venue_details.chat_completion")
 def test_extract_venue_details_returns_null_location_when_neither_found(mock_chat_completion):
     mock_chat_completion.return_value = (
-        '{"location": null, "hours_of_operation": null, "duration_minutes": null}'
+        '{"location": null, "location_type": null, "hours_of_operation": null, '
+        '"duration_minutes": null}'
     )
 
     result = extract_venue_details("Mystery Spot", ["A quirky roadside attraction"])
 
     assert result.location is None
+    assert result.location_type is None
 
 
 @patch("trip_planner.venue_details.chat_completion")
 def test_extract_venue_details_never_returns_venue_name_as_location(mock_chat_completion):
     mock_chat_completion.return_value = (
-        '{"location": "Blackett\'s Ridge", "hours_of_operation": null, "duration_minutes": null}'
+        '{"location": "Blackett\'s Ridge", "location_type": "PLACE", '
+        '"hours_of_operation": null, "duration_minutes": null}'
     )
 
     result = extract_venue_details("Blackett's Ridge", ["A trail in the desert"])
 
     assert result.location is None
+    assert result.location_type is None
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_coerces_unexpected_location_type_to_none(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": "Sabino Canyon Recreation Area", "location_type": "SOMETHING_ELSE", '
+        '"hours_of_operation": null, "duration_minutes": null}'
+    )
+
+    result = extract_venue_details(
+        "Blackett's Ridge", ["A challenging trail within Sabino Canyon Recreation Area"]
+    )
+
+    assert result.location == "Sabino Canyon Recreation Area"
+    assert result.location_type is None
 
 
 @patch("trip_planner.venue_details.chat_completion")

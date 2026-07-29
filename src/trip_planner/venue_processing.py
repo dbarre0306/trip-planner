@@ -24,6 +24,7 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
         interest=candidate.interest,
         description=description,
         location=details.location,
+        location_type=details.location_type,
         geo_location=candidate.geo_location,
         rating=candidate.rating,
         tags=[candidate.tag] if candidate.tag else [],
