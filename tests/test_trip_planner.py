@@ -61,7 +61,7 @@ def test_create_itinerary_processes_all_candidates_in_one_call(mock_search_place
 
     create_itinerary(travel_info)
 
-    mock_process_venues.assert_called_once_with([hiking_candidate, restaurant_candidate])
+    mock_process_venues.assert_called_once_with(travel_info, [hiking_candidate, restaurant_candidate])
 
 
 @patch("trip_planner.trip_planner.process_venues")

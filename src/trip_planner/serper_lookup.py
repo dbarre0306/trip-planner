@@ -39,7 +39,7 @@ def _is_reachable(url: str) -> bool:
 
 
 def lookup_venue(name: str, destination: str) -> VenueLookupResult:
-    results = _get_serper_search_results(f"{name} {destination}")
+    results = _get_serper_search_results(f"{name} '{destination}'")
 
     url = None
     for result in results:

@@ -27,7 +27,7 @@ def test_search_places_builds_request(mock_post):
     mock_post.assert_called_once_with(
         SERPER_PLACES_URL,
         headers={"X-API-KEY": "test-key", "Content-Type": "application/json"},
-        json={"q": "hiking Tucson, AZ"},
+        json={"q": "hiking 'Tucson, AZ'"},
     )
 
 

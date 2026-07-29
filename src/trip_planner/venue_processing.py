@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 
+from trip_planner.domain import TravelInfo
 from trip_planner.models import Venue, VenueCandidate
 from trip_planner.serper_lookup import lookup_venue
 from trip_planner.venue_description import generate_description
@@ -8,10 +9,10 @@ from trip_planner.venue_details import estimate_duration_minutes, extract_venue_
 _executor = ThreadPoolExecutor()
 
 
-def process_venue(candidate: VenueCandidate) -> Venue:
-    lookup_result = lookup_venue(candidate.name, candidate.location)
+def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
+    lookup_result = lookup_venue(candidate.name, travel_info.destination)
     description = generate_description(
-        candidate.name, candidate.interest, candidate.location, lookup_result.notes
+        candidate.name, candidate.interest, travel_info.destination, lookup_result.notes
     )
     details = extract_venue_details(candidate.name, lookup_result.notes)
     duration_minutes = details.duration_minutes
@@ -33,8 +34,8 @@ def process_venue(candidate: VenueCandidate) -> Venue:
     )
 
 
-def process_venues(candidates: list[VenueCandidate]) -> tuple[list[Venue], list[Exception]]:
-    futures = [_executor.submit(process_venue, candidate) for candidate in candidates]
+def process_venues(travel_info: TravelInfo, candidates: list[VenueCandidate]) -> tuple[list[Venue], list[Exception]]:
+    futures = [_executor.submit(process_venue, travel_info, candidate) for candidate in candidates]
 
     venues: list[Venue] = []
     errors: list[Exception] = []

@@ -31,7 +31,7 @@ def _get_geo_location(place: dict) -> GeoLocation | None:
 
 
 def search_places(interest: str, destination: str) -> list[VenueCandidate]:
-    places = _get_serper_places(f"{interest} {destination}")
+    places = _get_serper_places(f"{interest} '{destination}'")
     return [
         VenueCandidate(
             name=place.get("title"),

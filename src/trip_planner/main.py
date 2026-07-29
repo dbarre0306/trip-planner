@@ -22,8 +22,8 @@ def run():
             num_days = 3,
             num_adults = 2,
             num_children = 0,
-            interests = ["restaurants"]
-            #interests = ["hiking trails", "restaurants"]
+            #interests = ["restaurants"]
+            interests = ["hiking trails", "restaurants"]
         )
         create_itinerary(travel_info)
     except Exception as e:

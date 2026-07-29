@@ -1,9 +1,17 @@
 from unittest.mock import patch
 
+from trip_planner.domain import TravelInfo
 from trip_planner.models import GeoLocation, VenueCandidate
 from trip_planner.serper_lookup import VenueLookupResult
 from trip_planner.venue_details import VenueDetails
 from trip_planner.venue_processing import _executor, process_venue, process_venues
+
+_TRAVEL_INFO = TravelInfo(
+    destination="Tucson, AZ",
+    start_date="09/01/2026",
+    num_days=3,
+    num_adults=2,
+)
 
 
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
@@ -28,13 +36,12 @@ def test_process_venue_maps_fields_and_defaults(
     candidate = VenueCandidate(
         name="Sabino Canyon",
         interest="hiking",
-        location="Tucson, AZ",
         geo_location=GeoLocation(latitude=32.3199, longitude=-110.8226),
         tag="Hiking area",
         rating=4.7,
     )
 
-    venue = process_venue(candidate)
+    venue = process_venue(_TRAVEL_INFO, candidate)
 
     mock_lookup_venue.assert_called_once_with("Sabino Canyon", "Tucson, AZ")
     mock_generate_description.assert_called_once_with(
@@ -74,9 +81,9 @@ def test_process_venue_falls_back_to_duration_estimate_when_not_in_notes(
         location="Sabino Canyon Recreation Area", hours_of_operation=None, duration_minutes=None
     )
     mock_estimate_duration_minutes.return_value = 120
-    candidate = VenueCandidate(name="Sabino Canyon", interest="hiking", location="Tucson, AZ")
+    candidate = VenueCandidate(name="Sabino Canyon", interest="hiking")
 
-    venue = process_venue(candidate)
+    venue = process_venue(_TRAVEL_INFO, candidate)
 
     mock_estimate_duration_minutes.assert_called_once_with(
         "Sabino Canyon", "Sabino Canyon Recreation Area"
@@ -100,7 +107,7 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
 
-    venue = process_venue(candidate)
+    venue = process_venue(_TRAVEL_INFO, candidate)
 
     assert venue.rating is None
     assert venue.tags == []
@@ -121,7 +128,7 @@ def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
 
-    venue = process_venue(candidate)
+    venue = process_venue(_TRAVEL_INFO, candidate)
 
     assert venue.url is None
     assert venue.notes == []
@@ -140,9 +147,9 @@ def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
-    candidate = VenueCandidate(name="Mystery Spot", interest="hiking", location="Tucson, AZ")
+    candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
 
-    venue = process_venue(candidate)
+    venue = process_venue(_TRAVEL_INFO, candidate)
 
     mock_generate_description.assert_called_once_with("Mystery Spot", "hiking", "Tucson, AZ", [])
     assert venue.description == "A mysterious little spot."
@@ -166,7 +173,7 @@ def test_process_venues_returns_venue_for_every_candidate(
         VenueCandidate(name="Mystery Spot", interest="hiking"),
     ]
 
-    venues, errors = process_venues(candidates)
+    venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
     assert errors == []
     assert [venue.name for venue in venues] == ["Sabino Canyon", "Mystery Spot"]
@@ -190,13 +197,13 @@ def test_process_venues_collects_errors_without_aborting_others(
         VenueCandidate(name="Bad Venue", interest="hiking"),
     ]
 
-    def fake_process_venue(candidate):
+    def fake_process_venue(travel_info, candidate):
         if candidate.name == "Bad Venue":
             raise ValueError("boom")
-        return process_venue(candidate)
+        return process_venue(travel_info, candidate)
 
     with patch("trip_planner.venue_processing.process_venue", side_effect=fake_process_venue):
-        venues, errors = process_venues(candidates)
+        venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
     assert [venue.name for venue in venues] == ["Good Venue"]
     assert len(errors) == 1
@@ -224,7 +231,7 @@ def test_process_venues_collects_errors_from_description_generation_failures(
     with patch(
         "trip_planner.venue_processing.generate_description", side_effect=fake_generate_description
     ):
-        venues, errors = process_venues(candidates)
+        venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
     assert [venue.name for venue in venues] == ["Good Venue"]
     assert len(errors) == 1
@@ -250,6 +257,6 @@ def test_process_venues_dispatches_through_shared_executor(
     ]
 
     with patch.object(_executor, "submit", wraps=_executor.submit) as mock_submit:
-        process_venues(candidates)
+        process_venues(_TRAVEL_INFO, candidates)
 
     assert mock_submit.call_count == 2

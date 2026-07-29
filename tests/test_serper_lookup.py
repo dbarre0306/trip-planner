@@ -32,7 +32,7 @@ def test_lookup_venue_builds_request(mock_post):
     mock_post.assert_called_once_with(
         SERPER_SEARCH_URL,
         headers={"X-API-KEY": "test-key", "Content-Type": "application/json"},
-        json={"q": "Sabino Canyon Tucson, AZ"},
+        json={"q": "Sabino Canyon 'Tucson, AZ'"},
         timeout=5,
     )
 

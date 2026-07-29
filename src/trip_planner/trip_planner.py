@@ -17,7 +17,7 @@ def create_itinerary(travel_info: TravelInfo):
         print(candidate.model_dump_json(indent=2))
     print("--------------")
 
-    venues, errors = process_venues(candidates)
+    venues, errors = process_venues(travel_info, candidates)
     for venue in venues:
         print(venue.model_dump_json(indent=2))
     for error in errors:
