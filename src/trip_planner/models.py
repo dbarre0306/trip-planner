@@ -22,6 +22,7 @@ class Venue(BaseModel):
     interest: str | None
     description: str = Field(default="", max_length=300)
     location: str | None = None
+    location_type: Literal["STREET_ADDRESS", "PLACE"] | None = None
     geo_location: GeoLocation | None = None
     url: str | None = None
     hours_of_operation: str | None = None

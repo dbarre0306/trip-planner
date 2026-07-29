@@ -30,6 +30,7 @@ def test_process_venue_maps_fields_and_defaults(
     mock_generate_description.return_value = "A scenic hiking spot in the desert."
     mock_extract_venue_details.return_value = VenueDetails(
         location="Sabino Canyon Recreation Area",
+        location_type="PLACE",
         hours_of_operation="Daily 7am-6pm",
         duration_minutes=90,
     )
@@ -52,6 +53,7 @@ def test_process_venue_maps_fields_and_defaults(
     assert venue.name == "Sabino Canyon"
     assert venue.interest == "hiking"
     assert venue.location == "Sabino Canyon Recreation Area"
+    assert venue.location_type == "PLACE"
     assert venue.geo_location == GeoLocation(latitude=32.3199, longitude=-110.8226)
     assert venue.description == "A scenic hiking spot in the desert."
     assert venue.url == "https://sabinocanyon.example"

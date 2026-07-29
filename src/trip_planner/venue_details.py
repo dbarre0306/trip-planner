@@ -1,6 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
+from typing import Literal
 
 from trip_planner.openai_client import chat_completion
 
@@ -18,11 +19,14 @@ _EXTRACTION_INSTRUCTIONS = (
     "museum, and a trail within a recreation area should resolve to the recreation area, not "
     "the trail's own name. Never use the venue name itself as the location. If neither can be "
     "found, use null.\n\n"
+    "location_type: Classify the value you gave for location. Use \"STREET_ADDRESS\" if it is a "
+    "street address, \"PLACE\" if it is a containing place or area name, or null if location "
+    "itself is null.\n\n"
     "hours_of_operation: Use the hours exactly as stated in the notes, in whatever format they "
     "appear. If no hours are stated, use null.\n\n"
     "duration_minutes: If a duration or typical visit length is stated in the notes, convert "
     "it to a whole number of minutes. If no duration is stated, use null.\n\n"
-    "Respond with ONLY a JSON object with exactly these three keys: location, "
+    "Respond with ONLY a JSON object with exactly these four keys: location, location_type, "
     "hours_of_operation, duration_minutes."
 )
 
@@ -38,6 +42,7 @@ _DURATION_ESTIMATE_INSTRUCTIONS = (
 @dataclass(frozen=True)
 class VenueDetails:
     location: str | None = None
+    location_type: Literal["STREET_ADDRESS", "PLACE"] | None = None
     hours_of_operation: str | None = None
     duration_minutes: int | None = None
 
@@ -58,6 +63,12 @@ def _parse_json_object(text: str) -> dict:
 def _as_optional_str(value: object) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip()
+    return None
+
+
+def _as_optional_location_type(value: object) -> Literal["STREET_ADDRESS", "PLACE"] | None:
+    if value in ("STREET_ADDRESS", "PLACE"):
+        return value
     return None
 
 
@@ -92,8 +103,12 @@ def extract_venue_details(name: str, notes: list[str]) -> VenueDetails:
     response = chat_completion([{"role": "user", "content": prompt}])
     data = _parse_json_object(response)
 
+    location = _resolve_location(name, _as_optional_str(data.get("location")))
+    location_type = _as_optional_location_type(data.get("location_type")) if location else None
+
     return VenueDetails(
-        location=_resolve_location(name, _as_optional_str(data.get("location"))),
+        location=location,
+        location_type=location_type,
         hours_of_operation=_as_optional_str(data.get("hours_of_operation")),
         duration_minutes=_as_optional_int(data.get("duration_minutes")),
     )
