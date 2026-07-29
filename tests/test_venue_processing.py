@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from trip_planner.models import VenueCandidate
+from trip_planner.models import GeoLocation, VenueCandidate
 from trip_planner.serper_lookup import VenueLookupResult
 from trip_planner.venue_processing import _executor, process_venue, process_venues
 
@@ -16,6 +16,7 @@ def test_process_venue_maps_fields_and_defaults(mock_lookup_venue, mock_generate
         name="Sabino Canyon",
         interest="hiking",
         location="Tucson, AZ",
+        geo_location=GeoLocation(latitude=32.3199, longitude=-110.8226),
         tag="Hiking area",
         rating=4.7,
     )
@@ -28,7 +29,8 @@ def test_process_venue_maps_fields_and_defaults(mock_lookup_venue, mock_generate
     )
     assert venue.name == "Sabino Canyon"
     assert venue.interest == "hiking"
-    assert venue.location == "Tucson, AZ"
+    assert venue.location is None
+    assert venue.geo_location == GeoLocation(latitude=32.3199, longitude=-110.8226)
     assert venue.description == "A scenic hiking spot in the desert."
     assert venue.url == "https://sabinocanyon.example"
     assert venue.hours_of_operation is None
