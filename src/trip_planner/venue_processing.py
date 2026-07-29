@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from trip_planner.models import Venue, VenueCandidate
 from trip_planner.serper_lookup import lookup_venue
 from trip_planner.venue_description import generate_description
+from trip_planner.venue_details import estimate_duration_minutes, extract_venue_details
 
 _executor = ThreadPoolExecutor()
 
@@ -12,15 +13,22 @@ def process_venue(candidate: VenueCandidate) -> Venue:
     description = generate_description(
         candidate.name, candidate.interest, candidate.location, lookup_result.notes
     )
+    details = extract_venue_details(candidate.name, lookup_result.notes)
+    duration_minutes = details.duration_minutes
+    if duration_minutes is None:
+        duration_minutes = estimate_duration_minutes(candidate.name, details.location)
+
     return Venue(
         name=candidate.name,
         interest=candidate.interest,
         description=description,
-        location=None,
+        location=details.location,
         geo_location=candidate.geo_location,
         rating=candidate.rating,
         tags=[candidate.tag] if candidate.tag else [],
         url=lookup_result.url,
+        hours_of_operation=details.hours_of_operation,
+        duration_minutes=duration_minutes,
         notes=lookup_result.notes,
     )
 

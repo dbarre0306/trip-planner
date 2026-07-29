@@ -2,16 +2,29 @@ from unittest.mock import patch
 
 from trip_planner.models import GeoLocation, VenueCandidate
 from trip_planner.serper_lookup import VenueLookupResult
+from trip_planner.venue_details import VenueDetails
 from trip_planner.venue_processing import _executor, process_venue, process_venues
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
-def test_process_venue_maps_fields_and_defaults(mock_lookup_venue, mock_generate_description):
+def test_process_venue_maps_fields_and_defaults(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
     mock_lookup_venue.return_value = VenueLookupResult(
         url="https://sabinocanyon.example", notes=["A scenic hiking spot"]
     )
     mock_generate_description.return_value = "A scenic hiking spot in the desert."
+    mock_extract_venue_details.return_value = VenueDetails(
+        location="Sabino Canyon Recreation Area",
+        hours_of_operation="Daily 7am-6pm",
+        duration_minutes=90,
+    )
     candidate = VenueCandidate(
         name="Sabino Canyon",
         interest="hiking",
@@ -27,14 +40,16 @@ def test_process_venue_maps_fields_and_defaults(mock_lookup_venue, mock_generate
     mock_generate_description.assert_called_once_with(
         "Sabino Canyon", "hiking", "Tucson, AZ", ["A scenic hiking spot"]
     )
+    mock_extract_venue_details.assert_called_once_with("Sabino Canyon", ["A scenic hiking spot"])
+    mock_estimate_duration_minutes.assert_not_called()
     assert venue.name == "Sabino Canyon"
     assert venue.interest == "hiking"
-    assert venue.location is None
+    assert venue.location == "Sabino Canyon Recreation Area"
     assert venue.geo_location == GeoLocation(latitude=32.3199, longitude=-110.8226)
     assert venue.description == "A scenic hiking spot in the desert."
     assert venue.url == "https://sabinocanyon.example"
-    assert venue.hours_of_operation is None
-    assert venue.duration_minutes is None
+    assert venue.hours_of_operation == "Daily 7am-6pm"
+    assert venue.duration_minutes == 90
     assert venue.origin == "web"
     assert venue.rating == 4.7
     assert venue.tags == ["Hiking area"]
@@ -43,13 +58,46 @@ def test_process_venue_maps_fields_and_defaults(mock_lookup_venue, mock_generate
     assert venue.rejection_reason is None
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_falls_back_to_duration_estimate_when_not_in_notes(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(notes=["A scenic hiking spot"])
+    mock_generate_description.return_value = "A scenic hiking spot in the desert."
+    mock_extract_venue_details.return_value = VenueDetails(
+        location="Sabino Canyon Recreation Area", hours_of_operation=None, duration_minutes=None
+    )
+    mock_estimate_duration_minutes.return_value = 120
+    candidate = VenueCandidate(name="Sabino Canyon", interest="hiking", location="Tucson, AZ")
+
+    venue = process_venue(candidate)
+
+    mock_estimate_duration_minutes.assert_called_once_with(
+        "Sabino Canyon", "Sabino Canyon Recreation Area"
+    )
+    assert venue.duration_minutes == 120
+    assert venue.hours_of_operation is None
+
+
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
 
     venue = process_venue(candidate)
@@ -58,13 +106,19 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
     assert venue.tags == []
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
 
     venue = process_venue(candidate)
@@ -73,13 +127,19 @@ def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
     assert venue.notes == []
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidate = VenueCandidate(name="Mystery Spot", interest="hiking", location="Tucson, AZ")
 
     venue = process_venue(candidate)
@@ -88,13 +148,19 @@ def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
     assert venue.description == "A mysterious little spot."
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venues_returns_venue_for_every_candidate(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidates = [
         VenueCandidate(name="Sabino Canyon", interest="hiking"),
         VenueCandidate(name="Mystery Spot", interest="hiking"),
@@ -106,13 +172,19 @@ def test_process_venues_returns_venue_for_every_candidate(
     assert [venue.name for venue in venues] == ["Sabino Canyon", "Mystery Spot"]
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venues_collects_errors_without_aborting_others(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidates = [
         VenueCandidate(name="Good Venue", interest="hiking"),
         VenueCandidate(name="Bad Venue", interest="hiking"),
@@ -131,9 +203,14 @@ def test_process_venues_collects_errors_without_aborting_others(
     assert isinstance(errors[0], ValueError)
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.lookup_venue")
-def test_process_venues_collects_errors_from_description_generation_failures(mock_lookup_venue):
+def test_process_venues_collects_errors_from_description_generation_failures(
+    mock_lookup_venue, mock_extract_venue_details, mock_estimate_duration_minutes
+):
     mock_lookup_venue.return_value = VenueLookupResult()
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidates = [
         VenueCandidate(name="Good Venue", interest="hiking"),
         VenueCandidate(name="Bad Venue", interest="hiking"),
@@ -154,13 +231,19 @@ def test_process_venues_collects_errors_from_description_generation_failures(moc
     assert isinstance(errors[0], RuntimeError)
 
 
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venues_dispatches_through_shared_executor(
-    mock_lookup_venue, mock_generate_description
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     candidates = [
         VenueCandidate(name="Sabino Canyon", interest="hiking"),
         VenueCandidate(name="Mystery Spot", interest="hiking"),
