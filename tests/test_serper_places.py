@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from trip_planner.models import GeoLocation
 from trip_planner.serper_places import SERPER_PLACES_URL, search_places
 
 
@@ -41,6 +42,8 @@ def test_search_places_maps_full_fields(mock_post):
                     "rating": 4.7,
                     "category": "Hiking area",
                     "address": "5700 N Sabino Canyon Rd, Tucson, AZ",
+                    "latitude": 32.3199,
+                    "longitude": -110.8226,
                 }
             ]
         }
@@ -53,7 +56,8 @@ def test_search_places_maps_full_fields(mock_post):
     assert venue.name == "Sabino Canyon"
     assert venue.rating == 4.7
     assert venue.tag == "Hiking area"
-    assert venue.location == "5700 N Sabino Canyon Rd, Tucson, AZ"
+    assert venue.location is None
+    assert venue.geo_location == GeoLocation(latitude=32.3199, longitude=-110.8226)
     assert venue.interest == "hiking"
 
 
@@ -70,7 +74,21 @@ def test_search_places_handles_missing_optional_fields(mock_post):
     assert venue.rating is None
     assert venue.tag is None
     assert venue.location is None
+    assert venue.geo_location is None
     assert venue.interest == "hiking"
+
+
+@patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
+@patch("trip_planner.serper_places.requests.post")
+def test_search_places_treats_partial_coordinates_as_missing(mock_post):
+    mock_post.return_value = _mock_response(
+        {"places": [{"title": "Mystery Spot", "latitude": 32.3199}]}
+    )
+
+    results = search_places("hiking", "Tucson, AZ")
+
+    assert len(results) == 1
+    assert results[0].geo_location is None
 
 
 @patch.dict("os.environ", {}, clear=True)
