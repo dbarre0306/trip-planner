@@ -14,6 +14,7 @@ _TRAVEL_INFO = TravelInfo(
 )
 
 
+@patch("trip_planner.venue_processing.determine_meal_tags")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -23,6 +24,7 @@ def test_process_venue_maps_fields_and_defaults(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_determine_meal_tags,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(
         url="https://sabinocanyon.example", notes=["A scenic hiking spot"]
@@ -34,6 +36,7 @@ def test_process_venue_maps_fields_and_defaults(
         hours_of_operation="Daily 7am-6pm",
         duration_minutes=90,
     )
+    mock_determine_meal_tags.return_value = []
     candidate = VenueCandidate(
         name="Sabino Canyon",
         interest="hiking",
@@ -50,6 +53,9 @@ def test_process_venue_maps_fields_and_defaults(
     )
     mock_extract_venue_details.assert_called_once_with("Sabino Canyon", ["A scenic hiking spot"])
     mock_estimate_duration_minutes.assert_not_called()
+    mock_determine_meal_tags.assert_called_once_with(
+        "hiking", "Sabino Canyon", ["A scenic hiking spot"], "Daily 7am-6pm"
+    )
     assert venue.name == "Sabino Canyon"
     assert venue.interest == "hiking"
     assert venue.location == "Sabino Canyon Recreation Area"
@@ -113,6 +119,34 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
 
     assert venue.rating is None
     assert venue.tags == []
+
+
+@patch("trip_planner.venue_processing.determine_meal_tags")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_appends_meal_tags_after_the_category_tag(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_determine_meal_tags,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(notes=["Popular lunch spot"])
+    mock_generate_description.return_value = "A cozy restaurant."
+    mock_extract_venue_details.return_value = VenueDetails(
+        duration_minutes=30, hours_of_operation="11am-9pm"
+    )
+    mock_determine_meal_tags.return_value = ["lunch", "dinner"]
+    candidate = VenueCandidate(name="The Grand Steakhouse", interest="restaurants", tag="Steakhouse")
+
+    venue = process_venue(_TRAVEL_INFO, candidate)
+
+    mock_determine_meal_tags.assert_called_once_with(
+        "restaurants", "The Grand Steakhouse", ["Popular lunch spot"], "11am-9pm"
+    )
+    assert venue.tags == ["Steakhouse", "lunch", "dinner"]
 
 
 @patch("trip_planner.venue_processing.estimate_duration_minutes")

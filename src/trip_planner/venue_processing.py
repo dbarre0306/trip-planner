@@ -6,6 +6,7 @@ from trip_planner.serper_lookup import lookup_venue
 from trip_planner.venue_deduplication import resolve_duplicate_venues
 from trip_planner.venue_description import generate_description
 from trip_planner.venue_details import VenueDetails, estimate_duration_minutes, extract_venue_details
+from trip_planner.venue_meal_tags import determine_meal_tags
 
 _executor = ThreadPoolExecutor()
 
@@ -28,6 +29,9 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
     if duration_minutes is None:
         duration_minutes = estimate_duration_minutes(candidate.name, details.location)
     status, rejection_reason = _determine_status(details, lookup_result.url)
+    meal_tags = determine_meal_tags(
+        candidate.interest, candidate.name, lookup_result.notes, details.hours_of_operation
+    )
 
     return Venue(
         name=candidate.name,
@@ -37,7 +41,7 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
         location_type=details.location_type,
         geo_location=candidate.geo_location,
         rating=candidate.rating,
-        tags=[candidate.tag] if candidate.tag else [],
+        tags=([candidate.tag] if candidate.tag else []) + meal_tags,
         url=lookup_result.url,
         hours_of_operation=details.hours_of_operation,
         duration_minutes=duration_minutes,
