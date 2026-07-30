@@ -119,6 +119,71 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_rejects_as_closed_when_details_say_so(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(
+        url="https://sabinocanyon.example", notes=["This spot has permanently closed"]
+    )
+    mock_generate_description.return_value = "A scenic hiking spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=True)
+    candidate = VenueCandidate(name="Sabino Canyon", interest="hiking")
+
+    venue = process_venue(_TRAVEL_INFO, candidate)
+
+    assert venue.status == "rejected"
+    assert venue.rejection_reason == "closed"
+
+
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_rejects_as_closed_even_without_a_url(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(notes=["Permanently closed"])
+    mock_generate_description.return_value = "A scenic hiking spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=True)
+    candidate = VenueCandidate(name="Sabino Canyon", interest="hiking")
+
+    venue = process_venue(_TRAVEL_INFO, candidate)
+
+    assert venue.status == "rejected"
+    assert venue.rejection_reason == "closed"
+
+
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_rejects_as_no_website_when_not_closed_and_no_url(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
+    mock_lookup_venue.return_value = VenueLookupResult()
+    mock_generate_description.return_value = "A mysterious little spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    candidate = VenueCandidate(name="Mystery Spot", interest="hiking")
+
+    venue = process_venue(_TRAVEL_INFO, candidate)
+
+    assert venue.status == "rejected"
+    assert venue.rejection_reason == "no website"
+
+
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
     mock_lookup_venue,
     mock_generate_description,
@@ -238,6 +303,37 @@ def test_process_venues_collects_errors_from_description_generation_failures(
     assert [venue.name for venue in venues] == ["Good Venue"]
     assert len(errors) == 1
     assert isinstance(errors[0], RuntimeError)
+
+
+@patch("trip_planner.venue_processing.resolve_duplicate_venues")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venues_runs_duplicate_resolution_over_the_full_list(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_resolve_duplicate_venues,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://example.com")
+    mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    deduplicated = [object()]
+    mock_resolve_duplicate_venues.return_value = deduplicated
+    candidates = [
+        VenueCandidate(name="Sabino Canyon", interest="hiking"),
+        VenueCandidate(name="Mystery Spot", interest="hiking"),
+    ]
+
+    venues, errors = process_venues(_TRAVEL_INFO, candidates)
+
+    assert errors == []
+    mock_resolve_duplicate_venues.assert_called_once()
+    (called_venues,) = mock_resolve_duplicate_venues.call_args[0]
+    assert [venue.name for venue in called_venues] == ["Sabino Canyon", "Mystery Spot"]
+    assert venues == deduplicated
 
 
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
