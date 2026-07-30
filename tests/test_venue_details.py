@@ -164,6 +164,103 @@ def test_extract_venue_details_tolerates_markdown_fenced_json(mock_chat_completi
 
 
 @patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_marks_closed_when_notes_indicate_it(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null, '
+        '"closed": true}'
+    )
+
+    result = extract_venue_details("The Moonstone", ["This restaurant has permanently closed"])
+
+    assert result.closed is True
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_defaults_closed_to_false_when_not_indicated(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null, '
+        '"closed": false}'
+    )
+
+    result = extract_venue_details("The Moonstone", ["A rooftop bar"])
+
+    assert result.closed is False
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_defaults_closed_to_false_when_field_missing(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null}'
+    )
+
+    result = extract_venue_details("The Moonstone", ["A rooftop bar"])
+
+    assert result.closed is False
+
+
+def test_venue_details_defaults_closed_to_false_when_no_notes():
+    result = extract_venue_details("Mystery Spot", [])
+
+    assert result.closed is False
+    assert result == VenueDetails()
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_prompt_distinguishes_ruins_from_closed(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null, '
+        '"closed": false}'
+    )
+
+    result = extract_venue_details(
+        "Bowen Stone House",
+        ["This is a long-abandoned relic, the ruins of an old stone homestead."],
+    )
+
+    assert result.closed is False
+    prompt = mock_chat_completion.call_args[0][0][0]["content"]
+    assert "ruin" in prompt.lower()
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_prompt_distinguishes_temporary_from_permanent_closure(
+    mock_chat_completion,
+):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null, '
+        '"closed": false}'
+    )
+
+    result = extract_venue_details(
+        "Some Trailhead",
+        ["Temporarily closed for construction from Monday through Friday."],
+    )
+
+    assert result.closed is False
+    prompt = mock_chat_completion.call_args[0][0][0]["content"]
+    assert "reopening" in prompt.lower()
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_prompt_distinguishes_weekly_day_off_from_closed(
+    mock_chat_completion,
+):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": "Mon - Closed, Tue - Closed, '
+        'Wed-Sat 12pm-8pm", "duration_minutes": null, "closed": false}'
+    )
+
+    result = extract_venue_details(
+        "Batey Puerto Rican Gastronomy",
+        ["Mon - Closed, Tue - Closed, Wed-Sat 12pm-8pm, Sunday 1pm-8pm"],
+    )
+
+    assert result.closed is False
+    prompt = mock_chat_completion.call_args[0][0][0]["content"]
+    assert "weekly hours listing" in prompt.lower()
+
+
+@patch("trip_planner.venue_details.chat_completion")
 def test_estimate_duration_minutes_uses_model_estimate(mock_chat_completion):
     mock_chat_completion.return_value = "90"
 

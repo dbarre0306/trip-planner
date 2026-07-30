@@ -26,8 +26,20 @@ _EXTRACTION_INSTRUCTIONS = (
     "appear. If no hours are stated, use null.\n\n"
     "duration_minutes: If a duration or typical visit length is stated in the notes, convert "
     "it to a whole number of minutes. If no duration is stated, use null.\n\n"
-    "Respond with ONLY a JSON object with exactly these four keys: location, location_type, "
-    "hours_of_operation, duration_minutes."
+    "closed: true only if the notes indicate the venue is not currently open to visitors, with "
+    "no reopening indicated — for example \"permanently closed\", \"out of business\", or "
+    "\"closed for the season\" with no reopening date given. A temporary closure with a "
+    "specific reopening date or timeframe (e.g. \"closed for construction through Friday\") is "
+    "still false, since the venue is expected to reopen. Also false when the notes merely "
+    "describe a historic site as a ruin, abandoned homestead, or long-derelict structure — "
+    "many trails and attractions lead to sites that are themselves ruins or abandoned "
+    "buildings but remain open to visit today; being a ruin does not by itself mean the venue "
+    "is closed. Also false when the word \"closed\" appears only as part of a weekly hours "
+    "listing next to specific day(s) of the week (e.g. \"Mon - Closed, Tue - Closed, "
+    "Wed-Sat 12pm-8pm\") — that describes the venue's normal days off, not the venue being shut "
+    "down.\n\n"
+    "Respond with ONLY a JSON object with exactly these five keys: location, location_type, "
+    "hours_of_operation, duration_minutes, closed."
 )
 
 _DURATION_ESTIMATE_INSTRUCTIONS = (
@@ -45,6 +57,7 @@ class VenueDetails:
     location_type: Literal["STREET_ADDRESS", "PLACE"] | None = None
     hours_of_operation: str | None = None
     duration_minutes: int | None = None
+    closed: bool = False
 
 
 def _parse_json_object(text: str) -> dict:
@@ -70,6 +83,10 @@ def _as_optional_location_type(value: object) -> Literal["STREET_ADDRESS", "PLAC
     if value in ("STREET_ADDRESS", "PLACE"):
         return value
     return None
+
+
+def _as_bool(value: object) -> bool:
+    return value is True
 
 
 def _as_optional_int(value: object) -> int | None:
@@ -111,6 +128,7 @@ def extract_venue_details(name: str, notes: list[str]) -> VenueDetails:
         location_type=location_type,
         hours_of_operation=_as_optional_str(data.get("hours_of_operation")),
         duration_minutes=_as_optional_int(data.get("duration_minutes")),
+        closed=_as_bool(data.get("closed")),
     )
 
 
