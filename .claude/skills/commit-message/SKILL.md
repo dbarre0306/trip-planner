@@ -6,6 +6,8 @@ allowed-tools: Bash(git status:*), Bash(git diff --staged), Bash(git commit:*)
 
 ## Context:
 
+Start by staging all of the new and modified files.
+
 - Current git status: !`git status`
 - Current git diff: !`git diff --staged`
 
