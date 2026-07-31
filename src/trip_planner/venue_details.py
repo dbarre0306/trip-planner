@@ -10,8 +10,9 @@ DEFAULT_DURATION_MINUTES = 60
 _INT_RE = re.compile(r"-?\d+")
 
 _EXTRACTION_INSTRUCTIONS = (
-    "Extract the following details about the venue using ONLY the notes below — do not "
-    "invent or infer anything that isn't stated in the notes.\n\n"
+    "Extract the following details about the venue. Unless a field's instructions say "
+    "otherwise, use ONLY the notes below — do not invent or infer anything that isn't stated "
+    "in the notes.\n\n"
     "location: If the notes contain a street address for the venue, use it. Otherwise, if "
     "the notes mention a distinct place or area the venue is situated within (e.g. a park, "
     "recreation area, or parent institution) that is not simply the venue's own name, use "
@@ -22,8 +23,12 @@ _EXTRACTION_INSTRUCTIONS = (
     "location_type: Classify the value you gave for location. Use \"STREET_ADDRESS\" if it is a "
     "street address, \"PLACE\" if it is a containing place or area name, or null if location "
     "itself is null.\n\n"
-    "hours_of_operation: Use the hours exactly as stated in the notes, in whatever format they "
-    "appear. If no hours are stated, use null.\n\n"
+    "hours_of_operation: Unlike the other fields, you are not limited to the notes for this "
+    "one. If hours are stated in the notes, use them exactly as stated, in whatever format "
+    "they appear. Otherwise, rely on your own general knowledge of this specific venue to give "
+    "its typical hours of operation. Only use null if you have no reasonably reliable basis — "
+    "from the notes or your own knowledge — for the venue's hours; never guess or invent hours "
+    "you aren't reasonably confident in.\n\n"
     "duration_minutes: If a duration or typical visit length is stated in the notes, convert "
     "it to a whole number of minutes. If no duration is stated, use null.\n\n"
     "closed: true only if the notes indicate the venue is not currently open to visitors, with "
@@ -111,10 +116,7 @@ def _resolve_location(name: str, raw_location: str | None) -> str | None:
 
 
 def extract_venue_details(name: str, notes: list[str]) -> VenueDetails:
-    if not notes:
-        return VenueDetails()
-
-    notes_text = "\n".join(f"- {note}" for note in notes)
+    notes_text = "\n".join(f"- {note}" for note in notes) if notes else "(none provided)"
     prompt = f"Venue name: {name}\n\nNotes:\n{notes_text}\n\n{_EXTRACTION_INSTRUCTIONS}"
 
     response = chat_completion([{"role": "user", "content": prompt}])

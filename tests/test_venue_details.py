@@ -81,10 +81,14 @@ def test_extract_venue_details_coerces_unexpected_location_type_to_none(mock_cha
 
 
 @patch("trip_planner.venue_details.chat_completion")
-def test_extract_venue_details_skips_call_when_no_notes(mock_chat_completion):
+def test_extract_venue_details_calls_llm_when_no_notes(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null}'
+    )
+
     result = extract_venue_details("Mystery Spot", [])
 
-    mock_chat_completion.assert_not_called()
+    mock_chat_completion.assert_called_once()
     assert result == VenueDetails()
 
 
@@ -119,6 +123,34 @@ def test_extract_venue_details_returns_null_hours_when_not_stated(mock_chat_comp
     result = extract_venue_details("The Moonstone", ["A rooftop bar"])
 
     assert result.hours_of_operation is None
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_uses_general_knowledge_hours_when_notes_silent(
+    mock_chat_completion,
+):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": "Daily 9am-5pm", "duration_minutes": null}'
+    )
+
+    result = extract_venue_details("The Grand Canyon Visitor Center", ["A popular viewpoint"])
+
+    assert result.hours_of_operation == "Daily 9am-5pm"
+    prompt = mock_chat_completion.call_args[0][0][0]["content"]
+    assert "not limited to the notes" in prompt.lower()
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_uses_general_knowledge_hours_when_no_notes(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": "Daily 6am-10pm", "duration_minutes": null}'
+    )
+
+    result = extract_venue_details("Central Park", [])
+
+    assert result.hours_of_operation == "Daily 6am-10pm"
+    prompt = mock_chat_completion.call_args[0][0][0]["content"]
+    assert "(none provided)" in prompt
 
 
 @patch("trip_planner.venue_details.chat_completion")
@@ -198,7 +230,13 @@ def test_extract_venue_details_defaults_closed_to_false_when_field_missing(mock_
     assert result.closed is False
 
 
-def test_venue_details_defaults_closed_to_false_when_no_notes():
+@patch("trip_planner.venue_details.chat_completion")
+def test_venue_details_defaults_closed_to_false_when_no_notes(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null, '
+        '"closed": false}'
+    )
+
     result = extract_venue_details("Mystery Spot", [])
 
     assert result.closed is False
@@ -258,6 +296,20 @@ def test_extract_venue_details_prompt_distinguishes_weekly_day_off_from_closed(
     assert result.closed is False
     prompt = mock_chat_completion.call_args[0][0][0]["content"]
     assert "weekly hours listing" in prompt.lower()
+
+
+@patch("trip_planner.venue_details.chat_completion")
+def test_extract_venue_details_prompt_restricts_other_fields_to_notes(mock_chat_completion):
+    mock_chat_completion.return_value = (
+        '{"location": null, "hours_of_operation": null, "duration_minutes": null}'
+    )
+
+    extract_venue_details("The Moonstone", ["A rooftop bar"])
+
+    prompt = mock_chat_completion.call_args[0][0][0]["content"].lower()
+    assert "exactly as stated in the notes" not in prompt
+    assert "if no hours are stated, use null" not in prompt
+    assert "use only the notes below" in prompt
 
 
 @patch("trip_planner.venue_details.chat_completion")
