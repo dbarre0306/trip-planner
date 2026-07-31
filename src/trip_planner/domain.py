@@ -62,7 +62,7 @@ INTERESTS = [
     Interest(InterestId.AMUSEMENT_PARKS, "amusement parks", "Amusement parks", CategoryId.ENTERTAINMENT),
 
     # Outdoors
-    Interest(InterestId.HIKING, "hiking", "Hiking", CategoryId.OUTDOORS),
+    Interest(InterestId.HIKING, "hiking trails", "Hiking", CategoryId.OUTDOORS),
     Interest(InterestId.BEACHES, "beaches", "Beaches", CategoryId.OUTDOORS),
     Interest(InterestId.SCENIC_VIEWS, "scenic views", "Scenic views", CategoryId.OUTDOORS),
 

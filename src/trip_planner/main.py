@@ -16,7 +16,7 @@ def run():
     """
     try:
         #interests = [InterestId.RESTAURANTS, InterestId.STREET_FOOD, InterestId.COFFEE_SHOPS]
-        interests = [InterestId.RESTAURANTS]
+        interests = [InterestId.RESTAURANTS, InterestId.HIKING]
 
         travel_info = TravelInfo(
             destination = "Tucson, AZ",
