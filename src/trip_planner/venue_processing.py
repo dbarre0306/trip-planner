@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from trip_planner.domain import TravelInfo
 from trip_planner.models import Venue, VenueCandidate
 from trip_planner.serper_lookup import lookup_venue
+from trip_planner.standard_venues import STANDARD_VENUES
 from trip_planner.venue_deduplication import resolve_duplicate_venues
 from trip_planner.venue_description import generate_description
 from trip_planner.venue_details import VenueDetails, estimate_duration_minutes, extract_venue_details
@@ -62,4 +63,4 @@ def process_venues(travel_info: TravelInfo, candidates: list[VenueCandidate]) ->
         except Exception as exc:
             errors.append(exc)
 
-    return resolve_duplicate_venues(venues), errors
+    return resolve_duplicate_venues(venues) + STANDARD_VENUES, errors

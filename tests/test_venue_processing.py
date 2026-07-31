@@ -3,6 +3,7 @@ from unittest.mock import patch
 from trip_planner.domain import InterestId, TravelInfo
 from trip_planner.models import GeoLocation, VenueCandidate
 from trip_planner.serper_lookup import VenueLookupResult
+from trip_planner.standard_venues import STANDARD_VENUES
 from trip_planner.venue_details import VenueDetails
 from trip_planner.venue_processing import _executor, process_venue, process_venues
 
@@ -281,7 +282,36 @@ def test_process_venues_returns_venue_for_every_candidate(
     venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
     assert errors == []
-    assert [venue.name for venue in venues] == ["Sabino Canyon", "Mystery Spot"]
+    assert [venue.name for venue in venues] == [
+        "Sabino Canyon",
+        "Mystery Spot",
+        "Breakfast",
+        "Lunch",
+        "Dinner",
+    ]
+
+
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venues_appends_the_standard_meal_venues(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+):
+    mock_lookup_venue.return_value = VenueLookupResult()
+    mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    candidates = [VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)]
+
+    venues, errors = process_venues(_TRAVEL_INFO, candidates)
+
+    assert errors == []
+    standard_venues = [venue for venue in venues if venue.origin == "standard"]
+    assert standard_venues == STANDARD_VENUES
+    assert [venue.tags for venue in standard_venues] == [["breakfast"], ["lunch"], ["dinner"]]
 
 
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
@@ -310,7 +340,7 @@ def test_process_venues_collects_errors_without_aborting_others(
     with patch("trip_planner.venue_processing.process_venue", side_effect=fake_process_venue):
         venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
-    assert [venue.name for venue in venues] == ["Good Venue"]
+    assert [venue.name for venue in venues] == ["Good Venue", "Breakfast", "Lunch", "Dinner"]
     assert len(errors) == 1
     assert isinstance(errors[0], ValueError)
 
@@ -338,7 +368,7 @@ def test_process_venues_collects_errors_from_description_generation_failures(
     ):
         venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
-    assert [venue.name for venue in venues] == ["Good Venue"]
+    assert [venue.name for venue in venues] == ["Good Venue", "Breakfast", "Lunch", "Dinner"]
     assert len(errors) == 1
     assert isinstance(errors[0], RuntimeError)
 
@@ -371,7 +401,7 @@ def test_process_venues_runs_duplicate_resolution_over_the_full_list(
     mock_resolve_duplicate_venues.assert_called_once()
     (called_venues,) = mock_resolve_duplicate_venues.call_args[0]
     assert [venue.name for venue in called_venues] == ["Sabino Canyon", "Mystery Spot"]
-    assert venues == deduplicated
+    assert venues == deduplicated + STANDARD_VENUES
 
 
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
