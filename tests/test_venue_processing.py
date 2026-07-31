@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
 from trip_planner.domain import InterestId, TravelInfo
-from trip_planner.models import GeoLocation, VenueCandidate
+from trip_planner.models import GeoLocation, Venue, VenueCandidate
 from trip_planner.serper_lookup import VenueLookupResult
-from trip_planner.standard_venues import STANDARD_VENUES
+from trip_planner.venue_cost import VenueCost
 from trip_planner.venue_details import VenueDetails
 from trip_planner.venue_processing import _executor, process_venue, process_venues
 
@@ -14,7 +14,16 @@ _TRAVEL_INFO = TravelInfo(
     num_adults=2,
 )
 
+_DEFAULT_COST = VenueCost(per_adult=25.0, per_child=10.0)
 
+_STANDARD_VENUES_STUB = [
+    Venue(name="Breakfast", interest_id=None, origin="standard", tags=["breakfast"]),
+    Venue(name="Lunch", interest_id=None, origin="standard", tags=["lunch"]),
+    Venue(name="Dinner", interest_id=None, origin="standard", tags=["dinner"]),
+]
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.determine_meal_tags")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -26,6 +35,7 @@ def test_process_venue_maps_fields_and_defaults(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_determine_meal_tags,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(
         url="https://sabinocanyon.example", notes=["A scenic hiking spot"]
@@ -38,6 +48,7 @@ def test_process_venue_maps_fields_and_defaults(
         duration_minutes=90,
     )
     mock_determine_meal_tags.return_value = []
+    mock_estimate_venue_cost.return_value = VenueCost(per_adult=30.0, per_child=15.0)
     candidate = VenueCandidate(
         name="Sabino Canyon",
         interest_id=InterestId.HIKING,
@@ -57,6 +68,14 @@ def test_process_venue_maps_fields_and_defaults(
     mock_determine_meal_tags.assert_called_once_with(
         InterestId.HIKING, "Sabino Canyon", ["A scenic hiking spot"], "Daily 7am-6pm"
     )
+    mock_estimate_venue_cost.assert_called_once_with(
+        "Sabino Canyon",
+        InterestId.HIKING,
+        "Tucson, AZ",
+        "A scenic hiking spot in the desert.",
+        ["A scenic hiking spot"],
+        ["Hiking area"],
+    )
     assert venue.name == "Sabino Canyon"
     assert venue.interest_id == InterestId.HIKING
     assert venue.location == "Sabino Canyon Recreation Area"
@@ -72,8 +91,11 @@ def test_process_venue_maps_fields_and_defaults(
     assert venue.notes == ["A scenic hiking spot"]
     assert venue.status == "accepted"
     assert venue.rejection_reason is None
+    assert venue.estimated_cost_per_adult == 30.0
+    assert venue.estimated_cost_per_child == 15.0
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -83,6 +105,7 @@ def test_process_venue_falls_back_to_duration_estimate_when_not_in_notes(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(notes=["A scenic hiking spot"])
     mock_generate_description.return_value = "A scenic hiking spot in the desert."
@@ -90,6 +113,7 @@ def test_process_venue_falls_back_to_duration_estimate_when_not_in_notes(
         location="Sabino Canyon Recreation Area", hours_of_operation=None, duration_minutes=None
     )
     mock_estimate_duration_minutes.return_value = 120
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -101,6 +125,7 @@ def test_process_venue_falls_back_to_duration_estimate_when_not_in_notes(
     assert venue.hours_of_operation is None
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -110,10 +135,12 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -122,6 +149,7 @@ def test_process_venue_leaves_tags_empty_when_candidate_has_no_tag(
     assert venue.tags == []
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.determine_meal_tags")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -133,6 +161,7 @@ def test_process_venue_appends_meal_tags_after_the_category_tag(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_determine_meal_tags,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(notes=["Popular lunch spot"])
     mock_generate_description.return_value = "A cozy restaurant."
@@ -140,6 +169,7 @@ def test_process_venue_appends_meal_tags_after_the_category_tag(
         duration_minutes=30, hours_of_operation="11am-9pm"
     )
     mock_determine_meal_tags.return_value = ["lunch", "dinner"]
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(
         name="The Grand Steakhouse", interest_id=InterestId.RESTAURANTS, tag="Steakhouse"
     )
@@ -150,8 +180,41 @@ def test_process_venue_appends_meal_tags_after_the_category_tag(
         InterestId.RESTAURANTS, "The Grand Steakhouse", ["Popular lunch spot"], "11am-9pm"
     )
     assert venue.tags == ["Steakhouse", "lunch", "dinner"]
+    mock_estimate_venue_cost.assert_called_once_with(
+        "The Grand Steakhouse",
+        InterestId.RESTAURANTS,
+        "Tucson, AZ",
+        "A cozy restaurant.",
+        ["Popular lunch spot"],
+        ["Steakhouse", "lunch", "dinner"],
+    )
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_uses_none_costs_when_estimator_cannot_determine_them(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+):
+    mock_lookup_venue.return_value = VenueLookupResult()
+    mock_generate_description.return_value = "A mysterious little spot."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = VenueCost(per_adult=None, per_child=None)
+    candidate = VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING)
+
+    venue = process_venue(_TRAVEL_INFO, candidate)
+
+    assert venue.estimated_cost_per_adult is None
+    assert venue.estimated_cost_per_child is None
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -161,12 +224,14 @@ def test_process_venue_rejects_as_closed_when_details_say_so(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(
         url="https://sabinocanyon.example", notes=["This spot has permanently closed"]
     )
     mock_generate_description.return_value = "A scenic hiking spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=True)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -175,6 +240,7 @@ def test_process_venue_rejects_as_closed_when_details_say_so(
     assert venue.rejection_reason == "closed"
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -184,10 +250,12 @@ def test_process_venue_rejects_as_closed_even_without_a_url(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(notes=["Permanently closed"])
     mock_generate_description.return_value = "A scenic hiking spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=True)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -196,6 +264,7 @@ def test_process_venue_rejects_as_closed_even_without_a_url(
     assert venue.rejection_reason == "closed"
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -205,10 +274,12 @@ def test_process_venue_rejects_as_no_website_when_not_closed_and_no_url(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -217,6 +288,7 @@ def test_process_venue_rejects_as_no_website_when_not_closed_and_no_url(
     assert venue.rejection_reason == "no website"
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -226,10 +298,12 @@ def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -238,6 +312,7 @@ def test_process_venue_uses_no_url_or_notes_when_lookup_finds_nothing(
     assert venue.notes == []
 
 
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -247,10 +322,12 @@ def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A mysterious little spot."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     candidate = VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING)
 
     venue = process_venue(_TRAVEL_INFO, candidate)
@@ -261,6 +338,8 @@ def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
     assert venue.description == "A mysterious little spot."
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -270,10 +349,14 @@ def test_process_venues_returns_venue_for_every_candidate(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [
         VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING),
         VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING),
@@ -289,8 +372,11 @@ def test_process_venues_returns_venue_for_every_candidate(
         "Lunch",
         "Dinner",
     ]
+    mock_build_standard_venues.assert_called_once_with("Tucson, AZ")
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -300,20 +386,26 @@ def test_process_venues_appends_the_standard_meal_venues(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)]
 
     venues, errors = process_venues(_TRAVEL_INFO, candidates)
 
     assert errors == []
     standard_venues = [venue for venue in venues if venue.origin == "standard"]
-    assert standard_venues == STANDARD_VENUES
+    assert standard_venues == _STANDARD_VENUES_STUB
     assert [venue.tags for venue in standard_venues] == [["breakfast"], ["lunch"], ["dinner"]]
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -323,10 +415,14 @@ def test_process_venues_collects_errors_without_aborting_others(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [
         VenueCandidate(name="Good Venue", interest_id=InterestId.HIKING),
         VenueCandidate(name="Bad Venue", interest_id=InterestId.HIKING),
@@ -345,14 +441,22 @@ def test_process_venues_collects_errors_without_aborting_others(
     assert isinstance(errors[0], ValueError)
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venues_collects_errors_from_description_generation_failures(
-    mock_lookup_venue, mock_extract_venue_details, mock_estimate_duration_minutes
+    mock_lookup_venue,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [
         VenueCandidate(name="Good Venue", interest_id=InterestId.HIKING),
         VenueCandidate(name="Bad Venue", interest_id=InterestId.HIKING),
@@ -373,7 +477,9 @@ def test_process_venues_collects_errors_from_description_generation_failures(
     assert isinstance(errors[0], RuntimeError)
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
 @patch("trip_planner.venue_processing.resolve_duplicate_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -383,13 +489,17 @@ def test_process_venues_runs_duplicate_resolution_over_the_full_list(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
     mock_resolve_duplicate_venues,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult(url="https://example.com")
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
     deduplicated = [object()]
     mock_resolve_duplicate_venues.return_value = deduplicated
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [
         VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING),
         VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING),
@@ -401,9 +511,11 @@ def test_process_venues_runs_duplicate_resolution_over_the_full_list(
     mock_resolve_duplicate_venues.assert_called_once()
     (called_venues,) = mock_resolve_duplicate_venues.call_args[0]
     assert [venue.name for venue in called_venues] == ["Sabino Canyon", "Mystery Spot"]
-    assert venues == deduplicated + STANDARD_VENUES
+    assert venues == deduplicated + _STANDARD_VENUES_STUB
 
 
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
@@ -413,10 +525,14 @@ def test_process_venues_dispatches_through_shared_executor(
     mock_generate_description,
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_build_standard_venues,
 ):
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = _STANDARD_VENUES_STUB
     candidates = [
         VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING),
         VenueCandidate(name="Mystery Spot", interest_id=InterestId.HIKING),

@@ -3,7 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from trip_planner.domain import TravelInfo
 from trip_planner.models import Venue, VenueCandidate
 from trip_planner.serper_lookup import lookup_venue
-from trip_planner.standard_venues import STANDARD_VENUES
+from trip_planner.standard_venues import build_standard_venues
+from trip_planner.venue_cost import estimate_venue_cost
 from trip_planner.venue_deduplication import resolve_duplicate_venues
 from trip_planner.venue_description import generate_description
 from trip_planner.venue_details import VenueDetails, estimate_duration_minutes, extract_venue_details
@@ -33,6 +34,10 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
     meal_tags = determine_meal_tags(
         candidate.interest_id, candidate.name, lookup_result.notes, details.hours_of_operation
     )
+    tags = ([candidate.tag] if candidate.tag else []) + meal_tags
+    cost = estimate_venue_cost(
+        candidate.name, candidate.interest_id, travel_info.destination, description, lookup_result.notes, tags
+    )
 
     return Venue(
         name=candidate.name,
@@ -42,13 +47,15 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
         location_type=details.location_type,
         geo_location=candidate.geo_location,
         rating=candidate.rating,
-        tags=([candidate.tag] if candidate.tag else []) + meal_tags,
+        tags=tags,
         url=lookup_result.url,
         hours_of_operation=details.hours_of_operation,
         duration_minutes=duration_minutes,
         notes=lookup_result.notes,
         status=status,
         rejection_reason=rejection_reason,
+        estimated_cost_per_adult=cost.per_adult,
+        estimated_cost_per_child=cost.per_child,
     )
 
 
@@ -63,4 +70,4 @@ def process_venues(travel_info: TravelInfo, candidates: list[VenueCandidate]) ->
         except Exception as exc:
             errors.append(exc)
 
-    return resolve_duplicate_venues(venues) + STANDARD_VENUES, errors
+    return resolve_duplicate_venues(venues) + build_standard_venues(travel_info.destination), errors

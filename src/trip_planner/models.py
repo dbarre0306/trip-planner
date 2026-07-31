@@ -35,3 +35,5 @@ class Venue(BaseModel):
     notes: list[str] = []
     status: Literal["accepted", "rejected"] = "accepted"
     rejection_reason: str | None = None
+    estimated_cost_per_adult: float | None = None
+    estimated_cost_per_child: float | None = None
