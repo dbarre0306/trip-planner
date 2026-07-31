@@ -21,37 +21,58 @@ CATEGORIES = [
     Category(CategoryId.OTHER, "Other"),
 ]
 
+def find_category_by_id(id: CategoryId) -> Category | None:
+    return next((category for category in INTERESTS if category.id == id), None)
+
+class InterestId(Enum):
+    RESTAURANTS = "restaurants"
+    STREET_FOOD = "street-food"
+    COFFEE_SHOPS = "coffee-shops"
+    MUSEUMS = "museums"
+    HISTORY = "history"
+    LIVE_MUSIC = "live-music"
+    SHOWS = "shows"
+    AMUSEMENT_PARKS = "amusement-parks"
+    HIKING = "hiking"
+    BEACHES = "beaches"
+    SCENIC_VIEWS = "scenic-views"
+    SHOPPING = "shopping"
+    WELLNESS = "wellness"
+
 @dataclass(frozen=True)
 class Interest:
+    id: InterestId
     query: str
     label: str
     category_id: CategoryId
 
 INTERESTS = [
     # Food
-    Interest("restaurants", "Restaurants", CategoryId.FOOD),
-    Interest("street food and markets", "Street food & markets", CategoryId.FOOD),
-    Interest("coffee shops", "Coffee shops", CategoryId.FOOD),
+    Interest(InterestId.RESTAURANTS, "restaurants", "Restaurants", CategoryId.FOOD),
+    Interest(InterestId.STREET_FOOD, "street food and markets", "Street food & markets", CategoryId.FOOD),
+    Interest(InterestId.COFFEE_SHOPS, "coffee shops", "Coffee shops", CategoryId.FOOD),
 
     # Culture
-    Interest("museums", "Museums", CategoryId.CULTURE),
-    Interest("history", "History", CategoryId.CULTURE),
+    Interest(InterestId.MUSEUMS, "museums", "Museums", CategoryId.CULTURE),
+    Interest(InterestId.HISTORY, "history", "History", CategoryId.CULTURE),
 
     # Entertainment
-    Interest("live music", "Live music & nightlife", CategoryId.ENTERTAINMENT),
-    Interest("shows", "Shows & performances", CategoryId.ENTERTAINMENT),
-    Interest("amusement parks", "Amusement parks", CategoryId.ENTERTAINMENT),
+    Interest(InterestId.LIVE_MUSIC, "live music", "Live music & nightlife", CategoryId.ENTERTAINMENT),
+    Interest(InterestId.SHOWS, "shows and performances", "Shows & performances", CategoryId.ENTERTAINMENT),
+    Interest(InterestId.AMUSEMENT_PARKS, "amusement parks", "Amusement parks", CategoryId.ENTERTAINMENT),
 
     # Outdoors
-    Interest("hiking", "Hiking", CategoryId.OUTDOORS),
-    Interest("beaches", "Beaches", CategoryId.OUTDOORS),
-    Interest("scenic views", "Scenic views", CategoryId.OUTDOORS),
+    Interest(InterestId.HIKING, "hiking", "Hiking", CategoryId.OUTDOORS),
+    Interest(InterestId.BEACHES, "beaches", "Beaches", CategoryId.OUTDOORS),
+    Interest(InterestId.SCENIC_VIEWS, "scenic views", "Scenic views", CategoryId.OUTDOORS),
 
     # Other
-    Interest("shopping", "Shopping", CategoryId.OTHER),
-    Interest("wellness", "Wellness & relaxation", CategoryId.OTHER),
+    Interest(InterestId.SHOPPING, "shopping", "Shopping", CategoryId.OTHER),
+    Interest(InterestId.WELLNESS, "wellness", "Wellness & relaxation", CategoryId.OTHER),
 ]
 
+def find_interest_by_id(id: InterestId) -> Interest | None:
+    return next((interest for interest in INTERESTS if interest.id == id), None)
 
 @dataclass(frozen=True)
 class TravelInfo:
