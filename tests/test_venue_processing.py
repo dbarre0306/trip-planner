@@ -9,8 +9,7 @@ from trip_planner.venue_processing import _executor, process_venue, process_venu
 
 _TRAVEL_INFO = TravelInfo(
     destination="Tucson, AZ",
-    start_date="09/01/2026",
-    num_days=3,
+    travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
     num_adults=2,
 )
 

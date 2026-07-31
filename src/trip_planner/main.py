@@ -20,8 +20,7 @@ def run():
 
         travel_info = TravelInfo(
             destination = "Tucson, AZ",
-            start_date = "2026-09-01",
-            num_days = 3,
+            travel_dates = ["2026-09-01", "2026-09-02", "2026-09-03"],
             num_adults = 2,
             num_children = 0,
             interest_ids=interests

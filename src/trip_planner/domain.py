@@ -45,6 +45,7 @@ class Interest:
     search_text: str
     label: str
     category_id: CategoryId
+    examples: tuple[str, ...] = ()
 
 INTERESTS = [
     # Food
@@ -74,11 +75,13 @@ INTERESTS = [
 def find_interest_by_id(id: InterestId) -> Interest | None:
     return next((interest for interest in INTERESTS if interest.id == id), None)
 
+def choices_for(category_id: CategoryId) -> list[str]:
+    return [i.label for i in INTERESTS if i.category_id == category_id]
+
 @dataclass(frozen=True)
 class TravelInfo:
     destination: str
-    start_date: str
-    num_days: int
+    travel_dates: list[str]
     num_adults: int
     num_children: int = 0
     interest_ids: list[InterestId] = field(default_factory=list)

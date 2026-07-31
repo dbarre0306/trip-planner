@@ -2,17 +2,18 @@
 name = "trip_planner"
 version = "0.1.0"
 description = "trip-planner using the OpenAI SDK"
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = [{ name = "Donald Barre", email = "you@example.com" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "openai>=1.0.0",
     "python-dotenv>=1.0.0",
+    "gradio>=6.19.0",
     "requests>=2.34.2",
 ]
 
 [project.scripts]
 trip_planner = "trip_planner.main:run"
-run_crew = "trip_planner.main:run"
+app = "trip_planner.app:launch"
 
 [build-system]
 requires = ["hatchling"]

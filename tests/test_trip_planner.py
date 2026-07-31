@@ -10,8 +10,7 @@ def test_get_all_candidates_queries_once_per_interest(mock_search_places):
     mock_search_places.return_value = [VenueCandidate(name="Some Venue")]
     travel_info = TravelInfo(
         destination="Tucson, AZ",
-        start_date="09/01/2026",
-        num_days=3,
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
         num_adults=2,
         num_children=0,
         interest_ids=[InterestId.HIKING, InterestId.RESTAURANTS],
@@ -31,8 +30,7 @@ def test_get_all_candidates_combines_results_across_interests(mock_search_places
     mock_search_places.side_effect = [[hiking_candidate], [restaurant_candidate]]
     travel_info = TravelInfo(
         destination="Tucson, AZ",
-        start_date="09/01/2026",
-        num_days=3,
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
         num_adults=2,
         num_children=0,
         interest_ids=[InterestId.HIKING, InterestId.RESTAURANTS],
@@ -52,8 +50,7 @@ def test_create_itinerary_processes_all_candidates_in_one_call(mock_search_place
     mock_process_venues.return_value = ([], [])
     travel_info = TravelInfo(
         destination="Tucson, AZ",
-        start_date="09/01/2026",
-        num_days=3,
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
         num_adults=2,
         num_children=0,
         interest_ids=[InterestId.HIKING, InterestId.RESTAURANTS],
@@ -74,8 +71,7 @@ def test_create_itinerary_prints_processed_venues(mock_search_places, mock_proce
     )
     travel_info = TravelInfo(
         destination="Tucson, AZ",
-        start_date="09/01/2026",
-        num_days=3,
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
         num_adults=2,
         num_children=0,
         interest_ids=[InterestId.HIKING],
@@ -94,8 +90,7 @@ def test_create_itinerary_reports_processing_failures(mock_search_places, mock_p
     mock_process_venues.return_value = ([], [ValueError("boom")])
     travel_info = TravelInfo(
         destination="Tucson, AZ",
-        start_date="09/01/2026",
-        num_days=3,
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
         num_adults=2,
         num_children=0,
         interest_ids=[InterestId.HIKING],
