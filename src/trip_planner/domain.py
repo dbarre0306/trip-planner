@@ -42,7 +42,7 @@ class InterestId(Enum):
 @dataclass(frozen=True)
 class Interest:
     id: InterestId
-    query: str
+    search_text: str
     label: str
     category_id: CategoryId
 
@@ -81,4 +81,4 @@ class TravelInfo:
     num_days: int
     num_adults: int
     num_children: int = 0
-    interests: list[str] = field(default_factory=list)
+    interest_ids: list[InterestId] = field(default_factory=list)

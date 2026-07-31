@@ -1,8 +1,9 @@
 import json
 
+from trip_planner.domain import InterestId
 from trip_planner.openai_client import chat_completion
 
-_ELIGIBLE_INTERESTS = {"restaurants", "coffee shops", "street food and markets"}
+_ELIGIBLE_INTERESTS = {InterestId.RESTAURANTS, InterestId.COFFEE_SHOPS, InterestId.STREET_FOOD}
 _VALID_TAGS = {"breakfast", "lunch", "dinner"}
 _FALLBACK_TAGS = ["lunch", "dinner"]
 
@@ -39,7 +40,9 @@ def _parse_json_object(text: str) -> dict:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _build_prompt(name: str, notes: list[str], hours_of_operation: str | None, interest: str) -> str:
+def _build_prompt(
+    name: str, notes: list[str], hours_of_operation: str | None, interest_id: InterestId
+) -> str:
     lines = [f"Venue name: {name}"]
     if notes:
         lines.append("Notes:")
@@ -47,12 +50,12 @@ def _build_prompt(name: str, notes: list[str], hours_of_operation: str | None, i
     if hours_of_operation:
         lines.append(f"Hours of operation: {hours_of_operation}")
     lines.append("")
-    restriction = _STREET_FOOD_RESTRICTION if interest == "street food and markets" else ""
+    restriction = _STREET_FOOD_RESTRICTION if interest_id == InterestId.STREET_FOOD else ""
     lines.append(_INSTRUCTIONS.format(restriction=restriction))
     return "\n".join(lines)
 
 
-def _extract_tags(response: str, interest: str) -> list[str]:
+def _extract_tags(response: str, interest_id: InterestId) -> list[str]:
     data = _parse_json_object(response)
     raw_tags = data.get("meal_tags")
 
@@ -65,24 +68,23 @@ def _extract_tags(response: str, interest: str) -> list[str]:
             if tag in _VALID_TAGS and tag not in tags:
                 tags.append(tag)
 
-    if interest == "street food and markets":
+    if interest_id == InterestId.STREET_FOOD:
         tags = [tag for tag in tags if tag != "breakfast"]
 
     return tags
 
 
 def determine_meal_tags(
-    interest: str | None, name: str, notes: list[str], hours_of_operation: str | None
+    interest_id: InterestId | None, name: str, notes: list[str], hours_of_operation: str | None
 ) -> list[str]:
-    normalized_interest = interest.strip().casefold() if interest else ""
-    if normalized_interest not in _ELIGIBLE_INTERESTS:
+    if interest_id not in _ELIGIBLE_INTERESTS:
         return []
 
-    if normalized_interest == "coffee shops":
+    if interest_id == InterestId.COFFEE_SHOPS:
         return ["breakfast"]
 
-    prompt = _build_prompt(name, notes, hours_of_operation, normalized_interest)
+    prompt = _build_prompt(name, notes, hours_of_operation, interest_id)
     response = chat_completion([{"role": "user", "content": prompt}])
-    tags = _extract_tags(response, normalized_interest)
+    tags = _extract_tags(response, interest_id)
 
     return tags if tags else list(_FALLBACK_TAGS)

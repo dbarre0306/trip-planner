@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
+from trip_planner.domain import InterestId
 from trip_planner.venue_description import generate_description
 
 
@@ -10,7 +11,7 @@ def test_generate_description_uses_notes_as_primary_source(mock_chat_completion)
     mock_chat_completion.return_value = "A scenic canyon perfect for a hike."
 
     result = generate_description(
-        "Sabino Canyon", "hiking", "Tucson, AZ", ["A scenic hiking spot", "Great views"]
+        "Sabino Canyon", InterestId.HIKING, "Tucson, AZ", ["A scenic hiking spot", "Great views"]
     )
 
     assert result == "A scenic canyon perfect for a hike."
@@ -28,7 +29,7 @@ def test_generate_description_falls_back_to_name_interest_destination_when_no_no
 ):
     mock_chat_completion.return_value = "A mysterious spot worth exploring."
 
-    result = generate_description("Mystery Spot", "hiking", "Tucson, AZ", [])
+    result = generate_description("Mystery Spot", InterestId.HIKING, "Tucson, AZ", [])
 
     assert result == "A mysterious spot worth exploring."
     prompt = mock_chat_completion.call_args[0][0][0]["content"]
@@ -42,7 +43,7 @@ def test_generate_description_falls_back_to_name_interest_destination_when_no_no
 def test_generate_description_prompt_excludes_url_location_and_hours(mock_chat_completion):
     mock_chat_completion.return_value = "A great place to visit."
 
-    generate_description("Sabino Canyon", "hiking", "Tucson, AZ", ["A scenic hiking spot"])
+    generate_description("Sabino Canyon", InterestId.HIKING, "Tucson, AZ", ["A scenic hiking spot"])
 
     prompt = mock_chat_completion.call_args[0][0][0]["content"]
     assert "URL" in prompt
@@ -54,7 +55,7 @@ def test_generate_description_prompt_excludes_url_location_and_hours(mock_chat_c
 def test_generate_description_truncates_to_max_length(mock_chat_completion):
     mock_chat_completion.return_value = "x" * 400
 
-    result = generate_description("Sabino Canyon", "hiking", "Tucson, AZ", ["A scenic hiking spot"])
+    result = generate_description("Sabino Canyon", InterestId.HIKING, "Tucson, AZ", ["A scenic hiking spot"])
 
     assert len(result) == 300
 
@@ -64,7 +65,7 @@ def test_generate_description_truncation_ends_on_a_complete_sentence(mock_chat_c
     sentence = "Elevate your dining experience at The Moonstone, a rooftop bar with stunning views. "
     mock_chat_completion.return_value = sentence * 5
 
-    result = generate_description("The Moonstone", "food", "Tucson, AZ", ["A rooftop bar"])
+    result = generate_description("The Moonstone", InterestId.RESTAURANTS, "Tucson, AZ", ["A rooftop bar"])
 
     assert len(result) <= 300
     assert result.endswith(".")
@@ -76,4 +77,4 @@ def test_generate_description_propagates_errors(mock_chat_completion):
     mock_chat_completion.side_effect = RuntimeError("boom")
 
     with pytest.raises(RuntimeError):
-        generate_description("Sabino Canyon", "hiking", "Tucson, AZ", ["A scenic hiking spot"])
+        generate_description("Sabino Canyon", InterestId.HIKING, "Tucson, AZ", ["A scenic hiking spot"])

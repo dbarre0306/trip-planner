@@ -6,8 +6,8 @@ from trip_planner.venue_processing import process_venues
 
 def get_all_candidates(travel_info: TravelInfo) -> list[VenueCandidate]:
     candidates: list[VenueCandidate] = []
-    for interest in travel_info.interests:
-        candidates.extend(search_places(interest, travel_info.destination))
+    for interest_id in travel_info.interest_ids:
+        candidates.extend(search_places(interest_id, travel_info.destination))
     return candidates
 
 

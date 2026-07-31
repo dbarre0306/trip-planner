@@ -2,13 +2,15 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from trip_planner.domain import InterestId
+
 class GeoLocation(BaseModel):
     latitude: float
     longitude: float
 
 class VenueCandidate(BaseModel):
     name: str
-    interest: str | None = None
+    interest_id: InterestId | None = None
     location: str | None = None
     geo_location: GeoLocation | None = None
     tag: str | None = None
@@ -19,7 +21,7 @@ class VenueCandidates(BaseModel):
 
 class Venue(BaseModel):
     name: str
-    interest: str | None
+    interest_id: InterestId | None
     description: str = Field(default="", max_length=300)
     location: str | None = None
     location_type: Literal["STREET_ADDRESS", "PLACE"] | None = None

@@ -1,12 +1,13 @@
 import json
 from unittest.mock import patch
 
+from trip_planner.domain import InterestId
 from trip_planner.models import GeoLocation, Venue
 from trip_planner.venue_deduplication import resolve_duplicate_venues
 
 
 def _venue(name: str, **kwargs) -> Venue:
-    return Venue(name=name, interest=kwargs.pop("interest", None), **kwargs)
+    return Venue(name=name, interest_id=kwargs.pop("interest_id", None), **kwargs)
 
 
 @patch("trip_planner.venue_deduplication.chat_completion")
@@ -59,8 +60,8 @@ def test_resolve_duplicate_venues_keeps_most_specific_and_rejects_the_rest(mock_
 @patch("trip_planner.venue_deduplication.chat_completion")
 def test_resolve_duplicate_venues_ignores_interest_when_grouping(mock_chat):
     venues = [
-        _venue("Sunset Bar", interest="live music", url="https://sunsetbar.example"),
-        _venue("Sunset Bar Rooftop", interest="scenic views", url="https://sunsetbar.example"),
+        _venue("Sunset Bar", interest_id=InterestId.LIVE_MUSIC, url="https://sunsetbar.example"),
+        _venue("Sunset Bar Rooftop", interest_id=InterestId.SCENIC_VIEWS, url="https://sunsetbar.example"),
     ]
     mock_chat.return_value = json.dumps({"groups": [[1, 0]]})
 

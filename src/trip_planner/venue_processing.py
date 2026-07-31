@@ -22,7 +22,7 @@ def _determine_status(details: VenueDetails, url: str | None) -> tuple[str, str 
 def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
     lookup_result = lookup_venue(candidate.name, travel_info.destination)
     description = generate_description(
-        candidate.name, candidate.interest, travel_info.destination, lookup_result.notes
+        candidate.name, candidate.interest_id, travel_info.destination, lookup_result.notes
     )
     details = extract_venue_details(candidate.name, lookup_result.notes)
     duration_minutes = details.duration_minutes
@@ -30,12 +30,12 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
         duration_minutes = estimate_duration_minutes(candidate.name, details.location)
     status, rejection_reason = _determine_status(details, lookup_result.url)
     meal_tags = determine_meal_tags(
-        candidate.interest, candidate.name, lookup_result.notes, details.hours_of_operation
+        candidate.interest_id, candidate.name, lookup_result.notes, details.hours_of_operation
     )
 
     return Venue(
         name=candidate.name,
-        interest=candidate.interest,
+        interest_id=candidate.interest_id,
         description=description,
         location=details.location,
         location_type=details.location_type,
