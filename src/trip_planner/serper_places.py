@@ -2,6 +2,7 @@ import os
 
 import requests
 
+from trip_planner.domain import InterestId, find_interest_by_id
 from trip_planner.models import GeoLocation, VenueCandidate
 
 SERPER_PLACES_URL = "https://google.serper.dev/places"
@@ -30,12 +31,14 @@ def _get_geo_location(place: dict) -> GeoLocation | None:
     return GeoLocation(latitude=latitude, longitude=longitude)
 
 
-def search_places(interest: str, destination: str) -> list[VenueCandidate]:
-    places = _get_serper_places(f"{interest} '{destination}'")
+def search_places(interest_id: InterestId, destination: str) -> list[VenueCandidate]:
+    interest = find_interest_by_id(interest_id)
+    search_text = interest.search_text if interest else ""
+    places = _get_serper_places(f"{search_text} '{destination}'")
     return [
         VenueCandidate(
             name=place.get("title"),
-            interest=interest,
+            interest_id=interest_id,
             geo_location=_get_geo_location(place),
             tag=place.get("category"),
             rating=place.get("rating"),

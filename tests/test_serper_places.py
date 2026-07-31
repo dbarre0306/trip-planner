@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from trip_planner.domain import InterestId
 from trip_planner.models import GeoLocation
 from trip_planner.serper_places import SERPER_PLACES_URL, search_places
 
@@ -22,7 +23,7 @@ def _mock_response(json_data, status_code=200):
 def test_search_places_builds_request(mock_post):
     mock_post.return_value = _mock_response({"places": []})
 
-    search_places("hiking", "Tucson, AZ")
+    search_places(InterestId.HIKING, "Tucson, AZ")
 
     mock_post.assert_called_once_with(
         SERPER_PLACES_URL,
@@ -49,7 +50,7 @@ def test_search_places_maps_full_fields(mock_post):
         }
     )
 
-    results = search_places("hiking", "Tucson, AZ")
+    results = search_places(InterestId.HIKING, "Tucson, AZ")
 
     assert len(results) == 1
     venue = results[0]
@@ -58,7 +59,7 @@ def test_search_places_maps_full_fields(mock_post):
     assert venue.tag == "Hiking area"
     assert venue.location is None
     assert venue.geo_location == GeoLocation(latitude=32.3199, longitude=-110.8226)
-    assert venue.interest == "hiking"
+    assert venue.interest_id == InterestId.HIKING
 
 
 @patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
@@ -66,7 +67,7 @@ def test_search_places_maps_full_fields(mock_post):
 def test_search_places_handles_missing_optional_fields(mock_post):
     mock_post.return_value = _mock_response({"places": [{"title": "Mystery Spot"}]})
 
-    results = search_places("hiking", "Tucson, AZ")
+    results = search_places(InterestId.HIKING, "Tucson, AZ")
 
     assert len(results) == 1
     venue = results[0]
@@ -75,7 +76,7 @@ def test_search_places_handles_missing_optional_fields(mock_post):
     assert venue.tag is None
     assert venue.location is None
     assert venue.geo_location is None
-    assert venue.interest == "hiking"
+    assert venue.interest_id == InterestId.HIKING
 
 
 @patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
@@ -85,7 +86,7 @@ def test_search_places_treats_partial_coordinates_as_missing(mock_post):
         {"places": [{"title": "Mystery Spot", "latitude": 32.3199}]}
     )
 
-    results = search_places("hiking", "Tucson, AZ")
+    results = search_places(InterestId.HIKING, "Tucson, AZ")
 
     assert len(results) == 1
     assert results[0].geo_location is None
@@ -94,7 +95,7 @@ def test_search_places_treats_partial_coordinates_as_missing(mock_post):
 @patch.dict("os.environ", {}, clear=True)
 def test_search_places_raises_when_api_key_missing():
     with pytest.raises(RuntimeError):
-        search_places("hiking", "Tucson, AZ")
+        search_places(InterestId.HIKING, "Tucson, AZ")
 
 
 @patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
@@ -103,4 +104,4 @@ def test_search_places_raises_on_error_response(mock_post):
     mock_post.return_value = _mock_response({}, status_code=500)
 
     with pytest.raises(requests.HTTPError):
-        search_places("hiking", "Tucson, AZ")
+        search_places(InterestId.HIKING, "Tucson, AZ")
