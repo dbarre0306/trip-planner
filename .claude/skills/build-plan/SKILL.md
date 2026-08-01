@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Glob
 disable-model-invocation: true
 ---
 
-You are helping to turn an existing feature spec into an implementation plan. Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
+You are helping to turn an existing feature specification into an implementation plan. Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
 
 Specification File: $ARGUMENTS
 
@@ -16,7 +16,7 @@ Your job is to turn the spec file referenced above into a detailed markdown impl
 
 ## Step 1. Resolve the spec file
 
-`$ARGUMENTS` may be a full path (e.g. `_specs/card-component.md`) or just a slug (e.g. `card-component`). If it's not already a path ending in `.md`, use Glob to find a matching file under `_specs/`. If no spec file can be found, or more than one plausibly matches, stop and ask the user to clarify instead of guessing.
+`$ARGUMENTS` may be a full path (e.g. `_specs/add-employee-creation-form.md`) or just a slug (e.g. `add-employee-creation-form`). If it's not already a path ending in `.md`, use Glob to find a matching file under `_specs/`. If no spec file can be found, or more than one plausibly matches, stop and ask the user to clarify instead of guessing.
 
 ## Step 2. Read the spec
 
@@ -24,7 +24,7 @@ Read the resolved spec file in full. If it is missing required sections (e.g. no
 
 ## Step 3. Draft the plan content
 
-Create a markdown plan document using the exact structure defined in the plan template file here: @_plans/template.md. If the template file is missing or its structure is unclear, stop and tell the user instead of guessing at a structure.
+Use the @\_templates/plan-template.md when creating the plan content. The template must be followed exactly. If the template is missing, abort, tell the user why, and do not continue.
 
 The plan should:
 
@@ -35,14 +35,16 @@ The plan should:
 
 ## Step 4. Save the plan
 
+Before writing, use Glob to check whether `_plans/<feature-slug>.md` already exists. If it does, abort, tell the user the file already exists at that path, and do not continue.
+
 Save the plan to `_plans/<feature-slug>.md`, using the same base name as the spec file (e.g. `_specs/card-component.md` → `_plans/card-component.md`).
 
 ## Step 5. Final output to the user
 
 After the file is saved, respond with a short summary in this exact format:
 
-Spec file: _specs/<feature-slug>.md
-Plan file: _plans/<feature-slug>.md
+Spec file: \_specs/<feature-slug>.md
+Plan file: \_plans/<feature-slug>.md
 
 Do not repeat the full plan in the chat output unless the user explicitly asks to see it.
 

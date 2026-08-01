@@ -1,14 +1,10 @@
-# Feature Title
+# <Feature Title>
 
-branch: claude/feature/<feature-name>
+branch: feature/<feature-slug>
 
 ## Summary
 
-One paragraph describing the feature, its purpose, and what problem it solves.
-
-## User Story
-
-As a [user], I want to [action], so that [outcome].
+A short description of the feature and why it is necessary.
 
 ## Acceptance Criteria
 
@@ -31,6 +27,7 @@ As a [user], I want to [action], so that [outcome].
 ## UI / UX Notes
 
 Describe layout, component behaviour, validation, edge cases.
+Completely omit this section if there is no user interface for the feature.
 
 ## Testing
 

@@ -1,36 +1,36 @@
 ---
 name: spec
-description: Create a feature spec file and branch from a short idea
-argument-hint: Short feature description
-allowed-tools: Read, Write, Glob, Bash(git switch:*)
+description: Create a feature specification file and its feature branch
+argument-hint: Feature requirements
+allowed-tools: Read, Write, Glob, Bash(git status:*), Bash(git branch:*), Bash(git switch:*)
 disable-model-invocation: true
 ---
 
-You are helping to create a new feature spec for this application, from a short idea provided in the user input below. Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
+Create a feature specification file for this application based upon the user's requirements.
+Always adhere to any rules or requirements set out in any CLAUDE.md files when responding.
 
-User input: $ARGUMENTS
+Requirements: $ARGUMENTS
 
-## High level behavior
+## Expected Output
 
-Your job will be to turn the user input above into:
+- A human friendly feature title (feature_slug) in kebab-case (e.g. hr-employee-table)
+- A valid git branch name not already being used (e.g. feature/hr-employee-table)
+- A detailed markdown specification file in the \_specs/ folder (e.g. \_specs/hr-employee-table.md)
 
-- A human friendly feature title in kebab-case (e.g. hr-employee-table)
-- A safe git branch name not already taken (e.g. claude/feature/hr-employee-table)
-- A detailed markdown spec file under the _specs/ directory
+## Step 1. Validate the main branch
 
-Then save the spec file to disk and print a short summary of what you did.
+Unless otherwise instructed, abort, tell the user why, and do not continue if
 
-## Step 1. Check the current branch
+- the current git branch is NOT the `main` branch
+- or the `main` git branch has any uncommitted, unstaged, or untracked files
 
-Unless otherwise instructed, check the current Git branch, and abort this entire process if there are any uncommitted, unstaged, or untracked files in the working directory. Tell the user to commit or stash changes before proceeding, and DO NOT GO ANY FURTHER.
+## Step 2. Parse the requirements
 
-## Step 2. Parse the arguments
-
-From `$ARGUMENTS`, extract:
+Based on the `$ARGUMENTS`, extract:
 
 1. `feature_title`
    - A short, human readable title in Title Case.
-   - Example: "Card Component for Dashboard Stats".
+   - Example: "Add Employee Creation Form".
 
 2. `feature_slug`
    - A git safe slug.
@@ -42,29 +42,36 @@ From `$ARGUMENTS`, extract:
      - Collapse multiple `-` into one
      - Trim `-` from start and end
      - Maximum length 40 characters
-   - Example: `card-component` or `card-component-dashboard`.
+   - Example: `add-employee-creation-form`
 
 3. `branch_name`
-   - Format: `claude/feature/<feature_slug>`
-   - Example: `claude/feature/card-component`.
+   - Format: `feature/<feature_slug>`
+   - Example: `feature/add-employee-creation-form`.
 
-If you cannot infer a sensible `feature_title` and `feature_slug`, ask the user to clarify instead of guessing.
+If a sensible `feature_title` and `feature_slug` cannot be determined, ask the user to clarify instead of guessing.
 
-## Step 3. Switch to a new Git branch
+## Step 3. Switch to the git feature branch
 
-Before making any content, switch to a new Git branch using the `branch_name` derived from the `$ARGUMENTS`. If the branch name is already taken, then append a version number to it: e.g. `claude/feature/card-component-01`. If the `git switch` command fails for any other reason (e.g. not a git repository, detached HEAD), stop, tell the user the exact error, and do not proceed to the remaining steps.
+Before making any content, switch to the new git feature branch using the `branch_name`
+derived in step 2. If the branch name is already in use, then abort, tell the user why,
+and do not continue.
 
-## Step 4. Draft the spec content
+If the `git switch` command fails for any other reason (e.g. not a valid git branch name, detached HEAD, etc), then abort, tell the user the exact error, and do not continue.
 
-Create a markdown spec document that Plan mode can use directly and save it in the _specs folder using the `feature_slug`. Use the exact structure as defined in the spec template file here: @_specs/template.md. Do not add technical implementation details such as code examples. If the template file is missing or its structure is unclear, stop and tell the user instead of guessing at a structure.
+## Step 4. Create the specification file
+
+Before writing, use Glob to check whether `_specs/<feature_slug>.md` already exists. If it does, abort, tell the user the file already exists at that path, and do not continue.
+
+Create a specification markdown document and save it in the \_specs folder using the `feature_slug` for the filename. Use the @\_templates/spec-template.md when creating the specification content. The
+template must be followed exactly. Do not include any implementation, technical details, or code examples. If the template is missing, abort, tell the user why, and do not continue.
 
 ## Step 5. Final output to the user
 
 After the file is saved, respond to the user with a short summary in this exact format:
 
-Branch: <branch_name>
-Spec file: _specs/<feature_slug>.md
 Title: <feature_title>
+Branch: <branch_name>
+Spec file: \_specs/<feature_slug>.md
 
 Do not repeat the full spec in the chat output unless the user explicitly asks to see it. The goal is to save the spec file and report where it lives and what branch name to use.
 
