@@ -7,7 +7,15 @@ from datetime import date, datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 from trip_planner.assets import CSS, HEAD
-from trip_planner.domain import CATEGORIES, INTERESTS, CategoryId, InterestId, TravelInfo, choices_for
+from trip_planner.domain import (
+    CATEGORIES,
+    INTERESTS,
+    CategoryId,
+    InterestId,
+    TravelInfo,
+    choices_for,
+    find_interest_by_id,
+)
 from trip_planner.trip_planner import create_itinerary
 from trip_planner.validation import capitalize_destination, is_valid_destination, validate_form
 
@@ -63,8 +71,9 @@ def _trip_summary_html(
         party_parts.append(f"{n_children} child{'ren' if n_children != 1 else ''}")
     meta = f"{e(date_str)} &nbsp;·&nbsp; {days_label} &nbsp;·&nbsp; {', '.join(party_parts)}"
 
-    interest_labels = [item for group in interests for item in (group or [])]
-    if interest_labels:
+    interest_values = [item for group in interests for item in (group or [])]
+    if interest_values:
+        interest_labels = [find_interest_by_id(InterestId(v)).label for v in interest_values]
         pills = "".join(f'<span class="trip-summary-tag">{e(lbl)}</span>' for lbl in interest_labels)
     else:
         pills = '<span class="trip-summary-tag trip-summary-tag--empty">General sightseeing</span>'
@@ -233,13 +242,13 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update() for _ in range(n_interests)]
     )
 
-    interests = [InterestId.RESTAURANTS, InterestId.HIKING]
+    selected_values = [item for group in interests for item in (group or [])]
     travel_info = TravelInfo(
         destination = destination,
         travel_dates = _travel_dates(start_date, num_days),
         num_adults = int(num_adults),
         num_children = int(num_children),
-        interest_ids=interests
+        interest_ids=[InterestId(v) for v in selected_values]
     )
 
     try:

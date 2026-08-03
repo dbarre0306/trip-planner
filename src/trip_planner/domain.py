@@ -75,8 +75,8 @@ INTERESTS = [
 def find_interest_by_id(id: InterestId) -> Interest | None:
     return next((interest for interest in INTERESTS if interest.id == id), None)
 
-def choices_for(category_id: CategoryId) -> list[str]:
-    return [i.label for i in INTERESTS if i.category_id == category_id]
+def choices_for(category_id: CategoryId) -> list[tuple[str, str]]:
+    return [(i.label, i.id.value) for i in INTERESTS if i.category_id == category_id]
 
 @dataclass(frozen=True)
 class TravelInfo:
