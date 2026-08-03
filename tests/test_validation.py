@@ -85,26 +85,26 @@ def test_validate_form_accepts_future_start_date_as_timestamp():
 def test_validate_form_rejects_zero_days():
     errors, err_fields = validate_form(**_valid_args(num_days=0))
 
-    assert "Days must be at least 1" in errors
+    assert "Days must be between 1 and 4" in errors
     assert "num_days" in err_fields
 
 
 def test_validate_form_rejects_missing_days():
     errors, err_fields = validate_form(**_valid_args(num_days=None))
 
-    assert "Days must be at least 1" in errors
+    assert "Days must be between 1 and 4" in errors
     assert "num_days" in err_fields
 
 
 def test_validate_form_rejects_too_many_days():
-    errors, err_fields = validate_form(**_valid_args(num_days=11))
+    errors, err_fields = validate_form(**_valid_args(num_days=5))
 
-    assert "Days cannot exceed 10" in errors
+    assert "Days must be between 1 and 4" in errors
     assert "num_days" in err_fields
 
 
 def test_validate_form_accepts_boundary_days():
-    errors, err_fields = validate_form(**_valid_args(num_days=10))
+    errors, err_fields = validate_form(**_valid_args(num_days=4))
 
     assert errors == []
     assert "num_days" not in err_fields
@@ -118,14 +118,14 @@ def test_validate_form_rejects_zero_adults():
 
 
 def test_validate_form_rejects_too_many_adults():
-    errors, err_fields = validate_form(**_valid_args(num_adults=9))
+    errors, err_fields = validate_form(**_valid_args(num_adults=11))
 
-    assert "Adults cannot exceed 8" in errors
+    assert "Adults cannot exceed 10" in errors
     assert "num_adults" in err_fields
 
 
 def test_validate_form_accepts_boundary_adults():
-    errors, err_fields = validate_form(**_valid_args(num_adults=8))
+    errors, err_fields = validate_form(**_valid_args(num_adults=10))
 
     assert errors == []
     assert "num_adults" not in err_fields
@@ -146,10 +146,17 @@ def test_validate_form_rejects_missing_children():
 
 
 def test_validate_form_rejects_too_many_children():
-    errors, err_fields = validate_form(**_valid_args(num_children=9))
+    errors, err_fields = validate_form(**_valid_args(num_children=11))
 
-    assert "Children cannot exceed 8" in errors
+    assert "Children cannot exceed 10" in errors
     assert "num_children" in err_fields
+
+
+def test_validate_form_accepts_boundary_children():
+    errors, err_fields = validate_form(**_valid_args(num_children=10))
+
+    assert errors == []
+    assert "num_children" not in err_fields
 
 
 def test_validate_form_accepts_zero_children():

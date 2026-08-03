@@ -311,7 +311,7 @@ def build_ui() -> gr.Blocks:
                             elem_id="start-date-field",
                         )
                     with gr.Row():
-                        num_days     = gr.Number(label="Days",     value=1, precision=0, scale=1, min_width=0)
+                        num_days     = gr.Number(label="Days (1-4)", value=1, precision=0, scale=1, min_width=0)
                         num_adults   = gr.Number(label="Adults",   value=1, precision=0, scale=1, min_width=0)
                         num_children = gr.Number(label="Children", value=0, precision=0, scale=1, min_width=0)
                     field_errors = gr.HTML(value="", elem_id="field-errors")

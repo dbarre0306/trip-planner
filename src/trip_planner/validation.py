@@ -31,25 +31,22 @@ def validate_form(
             errors.append("Start date cannot be in the past")
             err_fields.add("start_date")
 
-    if not num_days or num_days < 1:
-        errors.append("Days must be at least 1")
-        err_fields.add("num_days")
-    elif num_days > 10:
-        errors.append("Days cannot exceed 10")
+    if not num_days or num_days < 1 or num_days > 4:
+        errors.append("Days must be between 1 and 4")
         err_fields.add("num_days")
 
     if not num_adults or num_adults < 1:
         errors.append("Adults must be at least 1")
         err_fields.add("num_adults")
-    elif num_adults > 8:
-        errors.append("Adults cannot exceed 8")
+    elif num_adults > 10:
+        errors.append("Adults cannot exceed 10")
         err_fields.add("num_adults")
 
     if num_children is None or num_children < 0:
         errors.append("Children cannot be negative")
         err_fields.add("num_children")
-    elif num_children > 8:
-        errors.append("Children cannot exceed 8")
+    elif num_children > 10:
+        errors.append("Children cannot exceed 10")
         err_fields.add("num_children")
 
     return errors, err_fields
