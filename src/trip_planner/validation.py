@@ -59,6 +59,18 @@ def validate_form(
     return errors, err_fields
 
 
+def capitalize_destination(destination: str) -> str:
+    words = []
+    for word in destination.split():
+        stripped = word.strip(",")
+        suffix = "," if word.endswith(",") else ""
+        if len(stripped) == 2 and stripped.isalpha():
+            words.append(stripped.upper() + suffix)
+        else:
+            words.append(stripped.capitalize() + suffix)
+    return " ".join(words)
+
+
 def is_valid_destination(destination: str) -> bool:
     answer = chat_completion(
         [

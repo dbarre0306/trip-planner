@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from trip_planner.assets import CSS, HEAD
 from trip_planner.domain import CATEGORIES, INTERESTS, CategoryId, InterestId, TravelInfo, choices_for
 from trip_planner.trip_planner import create_itinerary
-from trip_planner.validation import is_valid_destination, validate_form
+from trip_planner.validation import capitalize_destination, is_valid_destination, validate_form
 
 load_dotenv(override=True)
 
@@ -180,6 +180,8 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         if not is_valid:
             errors = ["Unknown destination"]
             err_fields = {"destination"}
+        else:
+            destination = capitalize_destination(destination.strip())
 
     if errors:
         error_messages = "".join(f"<li>{e}</li>" for e in errors)
@@ -210,7 +212,8 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(value=summary_loading)]                     # summary_html (button disabled)
         + [gr.update(value="")]                                  # field_errors
         + [gr.update(elem_classes=["interests-outer"])]         # interests_group
-        + [gr.update(elem_classes=[]) for _ in range(5)]        # clear field error classes
+        + [gr.update(value=destination, elem_classes=[])]       # destination (capitalized)
+        + [gr.update(elem_classes=[]) for _ in range(4)]        # clear other field error classes
         + [gr.update(value="Researching your destination…")]     # status_md
         + [gr.update(value="")]                                  # results_html
         + [gr.update() for _ in range(n_interests)]
@@ -218,7 +221,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
 
     interests = [InterestId.RESTAURANTS, InterestId.HIKING]
     travel_info = TravelInfo(
-        destination = destination.strip(),
+        destination = destination,
         travel_dates = _travel_dates(start_date, num_days),
         num_adults = int(num_adults),
         num_children = int(num_children),
