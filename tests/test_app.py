@@ -255,9 +255,14 @@ def test_on_schedule_itinerary_reports_unknown_destination(mock_is_valid):
     )
 
     mock_is_valid.assert_called_once_with("Nowhereville")
-    assert len(results) == 2
-    status_md = results[-1][10]
-    assert "Unknown destination" in status_md.get("value", "")
+    assert len(results) == 1
+    form_panel, results_panel = results[-1][0], results[-1][1]
+    assert form_panel.get("visible") is True
+    assert results_panel.get("visible") is False
+    field_errors = results[-1][3]
+    assert "Unknown destination" in field_errors
+    destination_update = results[-1][5]
+    assert destination_update.get("elem_classes") == ["field-error"]
 
 
 @patch("trip_planner.app.create_itinerary")

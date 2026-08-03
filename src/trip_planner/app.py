@@ -175,6 +175,12 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
     def field_cls(key: str) -> list[str]:
         return ["field-error"] if key in err_fields else []
 
+    if not errors:
+        is_valid = await asyncio.to_thread(is_valid_destination, destination.strip())
+        if not is_valid:
+            errors = ["Unknown destination"]
+            err_fields = {"destination"}
+
     if errors:
         error_messages = "".join(f"<li>{e}</li>" for e in errors)
         err_html = f"<ul style='margin:0; padding-left:1.2em; text-align:left'>{error_messages}</ul>"
@@ -209,21 +215,6 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(value="")]                                  # results_html
         + [gr.update() for _ in range(n_interests)]
     )
-
-    is_valid = await asyncio.to_thread(is_valid_destination, destination.strip())
-    if not is_valid:
-        yield (
-            [gr.update()]                                        # form_panel
-            + [gr.update()]                                      # results_panel
-            + [gr.update(value=summary_ready)]                   # summary_html (button enabled)
-            + [gr.update(value="")]                              # field_errors
-            + [gr.update()]                                      # interests_group
-            + [gr.update() for _ in range(5)]
-            + [gr.update(value="**Unknown destination.** Please use 'Plan a New Trip' to try again.")]
-            + [gr.update(value="")]                              # results_html
-            + [gr.update() for _ in range(n_interests)]
-        )
-        return
 
     interests = [InterestId.RESTAURANTS, InterestId.HIKING]
     travel_info = TravelInfo(
