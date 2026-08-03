@@ -9,7 +9,9 @@ _TONE_INSTRUCTION = (
 )
 _EXCLUSION_INSTRUCTION = (
     "Do not include any URL, website reference, physical address or location, "
-    "or hours of operation."
+    "or hours of operation. Do not name or reference any actual, real, or specific "
+    "restaurant, cafe, or venue, whether real or invented — describe only the generic "
+    "experience of the meal."
 )
 _LENGTH_INSTRUCTION = f"Keep the description under {MAX_DESCRIPTION_LENGTH} characters."
 
