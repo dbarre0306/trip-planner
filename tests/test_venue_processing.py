@@ -220,6 +220,117 @@ def test_process_venue_uses_none_costs_when_estimator_cannot_determine_them(
 @patch("trip_planner.venue_processing.extract_venue_details")
 @patch("trip_planner.venue_processing.generate_description")
 @patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_rejects_when_at_or_beyond_80_miles_from_destination(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://faraway.example")
+    mock_generate_description.return_value = "A place, but a very far one."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    candidate = VenueCandidate(
+        name="Far Away Spot",
+        interest_id=InterestId.HIKING,
+        geo_location=GeoLocation(latitude=34.0522, longitude=-118.2437),
+    )
+    destination_geo_location = GeoLocation(latitude=40.7128, longitude=-74.0060)
+
+    venue = process_venue(_TRAVEL_INFO, candidate, destination_geo_location)
+
+    assert venue.status == "rejected"
+    assert venue.rejection_reason == "too far from destination"
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_accepts_when_under_80_miles_from_destination(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://nearby.example")
+    mock_generate_description.return_value = "A nearby place."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    candidate = VenueCandidate(
+        name="Nearby Spot",
+        interest_id=InterestId.HIKING,
+        geo_location=GeoLocation(latitude=32.3199, longitude=-110.8226),
+    )
+    destination_geo_location = GeoLocation(latitude=32.2226, longitude=-110.9747)
+
+    venue = process_venue(_TRAVEL_INFO, candidate, destination_geo_location)
+
+    assert venue.status == "accepted"
+    assert venue.rejection_reason is None
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_unaffected_by_distance_when_candidate_has_no_geo_location(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://example.com")
+    mock_generate_description.return_value = "A place with unknown coordinates."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    candidate = VenueCandidate(name="Unknown Location Spot", interest_id=InterestId.HIKING)
+    destination_geo_location = GeoLocation(latitude=40.7128, longitude=-74.0060)
+
+    venue = process_venue(_TRAVEL_INFO, candidate, destination_geo_location)
+
+    assert venue.status == "accepted"
+    assert venue.rejection_reason is None
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venue_unaffected_by_distance_when_destination_geo_location_unresolved(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+):
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://faraway.example")
+    mock_generate_description.return_value = "A place, but a very far one."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30, closed=False)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    candidate = VenueCandidate(
+        name="Far Away Spot",
+        interest_id=InterestId.HIKING,
+        geo_location=GeoLocation(latitude=34.0522, longitude=-118.2437),
+    )
+
+    venue = process_venue(_TRAVEL_INFO, candidate, destination_geo_location=None)
+
+    assert venue.status == "accepted"
+    assert venue.rejection_reason is None
+
+
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
 def test_process_venue_rejects_as_closed_when_details_say_so(
     mock_lookup_venue,
     mock_generate_description,
@@ -340,6 +451,7 @@ def test_process_venue_falls_back_to_name_interest_destination_when_no_notes(
 
 
 @patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -351,8 +463,10 @@ def test_process_venues_returns_venue_for_every_candidate(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
@@ -377,6 +491,7 @@ def test_process_venues_returns_venue_for_every_candidate(
 
 
 @patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -388,8 +503,10 @@ def test_process_venues_appends_the_standard_meal_venues(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
@@ -406,6 +523,7 @@ def test_process_venues_appends_the_standard_meal_venues(
 
 
 @patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -417,8 +535,10 @@ def test_process_venues_collects_errors_without_aborting_others(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
@@ -429,10 +549,10 @@ def test_process_venues_collects_errors_without_aborting_others(
         VenueCandidate(name="Bad Venue", interest_id=InterestId.HIKING),
     ]
 
-    def fake_process_venue(travel_info, candidate):
+    def fake_process_venue(travel_info, candidate, destination_geo_location=None):
         if candidate.name == "Bad Venue":
             raise ValueError("boom")
-        return process_venue(travel_info, candidate)
+        return process_venue(travel_info, candidate, destination_geo_location)
 
     with patch("trip_planner.venue_processing.process_venue", side_effect=fake_process_venue):
         venues, errors = process_venues(_TRAVEL_INFO, candidates)
@@ -443,6 +563,7 @@ def test_process_venues_collects_errors_without_aborting_others(
 
 
 @patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -452,8 +573,10 @@ def test_process_venues_collects_errors_from_description_generation_failures(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
     mock_estimate_venue_cost.return_value = _DEFAULT_COST
@@ -480,6 +603,7 @@ def test_process_venues_collects_errors_from_description_generation_failures(
 
 @patch("trip_planner.venue_processing.build_standard_venues")
 @patch("trip_planner.venue_processing.resolve_duplicate_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -491,9 +615,11 @@ def test_process_venues_runs_duplicate_resolution_over_the_full_list(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_resolve_duplicate_venues,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult(url="https://example.com")
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
@@ -516,6 +642,7 @@ def test_process_venues_runs_duplicate_resolution_over_the_full_list(
 
 
 @patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
 @patch("trip_planner.venue_processing.estimate_venue_cost")
 @patch("trip_planner.venue_processing.estimate_duration_minutes")
 @patch("trip_planner.venue_processing.extract_venue_details")
@@ -527,8 +654,10 @@ def test_process_venues_dispatches_through_shared_executor(
     mock_extract_venue_details,
     mock_estimate_duration_minutes,
     mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
     mock_build_standard_venues,
 ):
+    mock_get_destination_geo_location.return_value = None
     mock_lookup_venue.return_value = VenueLookupResult()
     mock_generate_description.return_value = "A great place to visit."
     mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
@@ -543,3 +672,79 @@ def test_process_venues_dispatches_through_shared_executor(
         process_venues(_TRAVEL_INFO, candidates)
 
     assert mock_submit.call_count == 2
+
+
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venues_rejects_venues_beyond_80_miles_from_the_resolved_destination(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
+    mock_build_standard_venues,
+):
+    mock_get_destination_geo_location.return_value = GeoLocation(
+        latitude=40.7128, longitude=-74.0060
+    )
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://faraway.example")
+    mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = []
+    candidates = [
+        VenueCandidate(
+            name="Far Away Spot",
+            interest_id=InterestId.HIKING,
+            geo_location=GeoLocation(latitude=34.0522, longitude=-118.2437),
+        )
+    ]
+
+    venues, errors = process_venues(_TRAVEL_INFO, candidates)
+
+    mock_get_destination_geo_location.assert_called_once_with("Tucson, AZ")
+    assert errors == []
+    assert venues[0].status == "rejected"
+    assert venues[0].rejection_reason == "too far from destination"
+
+
+@patch("trip_planner.venue_processing.build_standard_venues")
+@patch("trip_planner.venue_processing.get_destination_geo_location")
+@patch("trip_planner.venue_processing.estimate_venue_cost")
+@patch("trip_planner.venue_processing.estimate_duration_minutes")
+@patch("trip_planner.venue_processing.extract_venue_details")
+@patch("trip_planner.venue_processing.generate_description")
+@patch("trip_planner.venue_processing.lookup_venue")
+def test_process_venues_continues_when_destination_geo_location_lookup_fails(
+    mock_lookup_venue,
+    mock_generate_description,
+    mock_extract_venue_details,
+    mock_estimate_duration_minutes,
+    mock_estimate_venue_cost,
+    mock_get_destination_geo_location,
+    mock_build_standard_venues,
+):
+    mock_get_destination_geo_location.side_effect = RuntimeError("SERPER_API_KEY environment variable is not set")
+    mock_lookup_venue.return_value = VenueLookupResult(url="https://faraway.example")
+    mock_generate_description.return_value = "A great place to visit."
+    mock_extract_venue_details.return_value = VenueDetails(duration_minutes=30)
+    mock_estimate_venue_cost.return_value = _DEFAULT_COST
+    mock_build_standard_venues.return_value = []
+    candidates = [
+        VenueCandidate(
+            name="Far Away Spot",
+            interest_id=InterestId.HIKING,
+            geo_location=GeoLocation(latitude=34.0522, longitude=-118.2437),
+        )
+    ]
+
+    venues, errors = process_venues(_TRAVEL_INFO, candidates)
+
+    assert errors == []
+    assert venues[0].status == "accepted"

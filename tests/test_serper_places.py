@@ -5,7 +5,7 @@ import requests
 
 from trip_planner.domain import InterestId
 from trip_planner.models import GeoLocation
-from trip_planner.serper_places import SERPER_PLACES_URL, search_places
+from trip_planner.serper_places import SERPER_PLACES_URL, get_destination_geo_location, search_places
 
 
 def _mock_response(json_data, status_code=200):
@@ -105,3 +105,42 @@ def test_search_places_raises_on_error_response(mock_post):
 
     with pytest.raises(requests.HTTPError):
         search_places(InterestId.HIKING, "Tucson, AZ")
+
+
+@patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
+@patch("trip_planner.serper_places.requests.post")
+def test_get_destination_geo_location_builds_request_and_returns_first_result(mock_post):
+    mock_post.return_value = _mock_response(
+        {"places": [{"title": "Tucson, AZ", "latitude": 32.2226, "longitude": -110.9747}]}
+    )
+
+    result = get_destination_geo_location("Tucson, AZ")
+
+    mock_post.assert_called_once_with(
+        SERPER_PLACES_URL,
+        headers={"X-API-KEY": "test-key", "Content-Type": "application/json"},
+        json={"q": "Tucson, AZ"},
+    )
+    assert result == GeoLocation(latitude=32.2226, longitude=-110.9747)
+
+
+@patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
+@patch("trip_planner.serper_places.requests.post")
+def test_get_destination_geo_location_returns_none_when_no_places(mock_post):
+    mock_post.return_value = _mock_response({"places": []})
+
+    assert get_destination_geo_location("Nowhere") is None
+
+
+@patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
+@patch("trip_planner.serper_places.requests.post")
+def test_get_destination_geo_location_returns_none_when_coordinates_missing(mock_post):
+    mock_post.return_value = _mock_response({"places": [{"title": "Nowhere"}]})
+
+    assert get_destination_geo_location("Nowhere") is None
+
+
+@patch.dict("os.environ", {}, clear=True)
+def test_get_destination_geo_location_raises_when_api_key_missing():
+    with pytest.raises(RuntimeError):
+        get_destination_geo_location("Tucson, AZ")
