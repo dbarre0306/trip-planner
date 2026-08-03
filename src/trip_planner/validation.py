@@ -9,6 +9,7 @@ def validate_form(
     num_days: float | None,
     num_adults: float | None,
     num_children: float | None,
+    interests: list[list[str]] | None = None,
 ) -> tuple[list[str], set[str]]:
     errors: list[str] = []
     err_fields: set[str] = set()
@@ -48,6 +49,12 @@ def validate_form(
     elif num_children > 10:
         errors.append("Children cannot exceed 10")
         err_fields.add("num_children")
+
+    if interests is not None:
+        num_interests = sum(len(group or []) for group in interests)
+        if num_interests < 2 or num_interests > 4:
+            errors.append("Select between 2 and 4 interests")
+            err_fields.add("interests")
 
     return errors, err_fields
 

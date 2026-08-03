@@ -162,14 +162,14 @@ def _itinerary_to_html(itinerary) -> str:
 
 # Output order for on_schedule_itinerary:
 #   [form_panel, results_panel, summary_html,
-#    field_errors,
+#    field_errors, interests_group,
 #    destination, start_date, num_days, num_adults, num_children,
 #    status_md, results_html]
 #   + interest_components
-# = 11 + n_interests items
+# = 12 + n_interests items
 
 async def on_schedule_itinerary(destination, start_date, num_days, num_adults, num_children, *interests):
-    errors, err_fields = validate_form(destination, start_date, num_days, num_adults, num_children)
+    errors, err_fields = validate_form(destination, start_date, num_days, num_adults, num_children, list(interests))
     n_interests = len(interests)
 
     def field_cls(key: str) -> list[str]:
@@ -183,6 +183,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(visible=False)]                         # results_panel
             + [gr.update()]                                      # summary_html
             + [err_html]                                         # field_errors
+            + [gr.update(elem_classes=["interests-outer"] + field_cls("interests"))]  # interests_group
             + [gr.update(elem_classes=field_cls("destination"))]
             + [gr.update(elem_classes=field_cls("start_date"))]
             + [gr.update(elem_classes=field_cls("num_days"))]
@@ -202,6 +203,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(visible=True)]                              # results_panel
         + [gr.update(value=summary_loading)]                     # summary_html (button disabled)
         + [gr.update(value="")]                                  # field_errors
+        + [gr.update(elem_classes=["interests-outer"])]         # interests_group
         + [gr.update(elem_classes=[]) for _ in range(5)]        # clear field error classes
         + [gr.update(value="Researching your destination…")]     # status_md
         + [gr.update(value="")]                                  # results_html
@@ -215,6 +217,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update()]                                      # results_panel
             + [gr.update(value=summary_ready)]                   # summary_html (button enabled)
             + [gr.update(value="")]                              # field_errors
+            + [gr.update()]                                      # interests_group
             + [gr.update() for _ in range(5)]
             + [gr.update(value="**Unknown destination.** Please use 'Plan a New Trip' to try again.")]
             + [gr.update(value="")]                              # results_html
@@ -242,7 +245,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             except asyncio.TimeoutError:
                 n_dot = (n_dot % 3) + 1
                 yield (
-                    [gr.update() for _ in range(9)]
+                    [gr.update() for _ in range(10)]
                     + [gr.update(value=f"Researching your destination{'.' * n_dot}")]
                     + [gr.update()]
                     + [gr.update() for _ in range(n_interests)]
@@ -254,6 +257,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update()]                                      # results_panel
             + [gr.update(value=summary_ready)]                   # summary_html (button enabled)
             + [gr.update(value="")]                              # field_errors
+            + [gr.update()]                                      # interests_group
             + [gr.update() for _ in range(5)]
             + [gr.update(value=f"**An error occurred:** {exc}")]
             + [gr.update(value="")]
@@ -268,6 +272,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update()]                                      # results_panel
             + [gr.update(value=summary_ready)]                   # summary_html (button enabled)
             + [gr.update(value="")]                              # field_errors
+            + [gr.update()]                                      # interests_group
             + [gr.update() for _ in range(5)]
             + [gr.update(value=f"**{msg}**")]
             + [gr.update(value="")]
@@ -280,6 +285,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update()]                                          # results_panel
         + [gr.update(value=summary_ready)]                       # summary_html (button enabled)
         + [gr.update(value="")]                                  # field_errors
+        + [gr.update()]                                          # interests_group
         + [gr.update() for _ in range(5)]
         + [gr.update(value="")]                                  # status_md
         + [gr.update(value=_itinerary_to_html(itinerary))]      # results_html
@@ -318,8 +324,12 @@ def build_ui() -> gr.Blocks:
 
                 interest_components = []
                 _category_by_id = {c.id: c for c in CATEGORIES}
-                with gr.Group(elem_classes=["interests-outer"]):
-                    gr.HTML('<label>Select Your Interests</label>', elem_classes=["interests-label"])
+                with gr.Group(elem_classes=["interests-outer"]) as interests_group:
+                    gr.HTML(
+                        '<label>Select Your Interests</label>'
+                        '<span class="interests-hint">Choose 2–4</span>',
+                        elem_classes=["interests-label"],
+                    )
                     for key in (CategoryId.FOOD, CategoryId.CULTURE, CategoryId.OUTDOORS, CategoryId.ENTERTAINMENT, CategoryId.OTHER):
                         interest_components.append(gr.CheckboxGroup(
                             choices=choices_for(key),
@@ -351,7 +361,7 @@ def build_ui() -> gr.Blocks:
             inputs=[destination, start_date, num_days, num_adults, num_children] + interest_components,
             outputs=[
                 form_panel, results_panel, summary_html,
-                field_errors,
+                field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
             ] + interest_components,
@@ -365,6 +375,7 @@ def build_ui() -> gr.Blocks:
                 + [gr.update(visible=False)]              # results_panel
                 + [gr.update(value="")]                   # summary_html
                 + [gr.update(value="")]                   # field_errors
+                + [gr.update(elem_classes=["interests-outer"])]  # interests_group
                 + [gr.update(value="", elem_classes=[])]  # destination
                 + [gr.update(value=None)]                 # start_date
                 + [gr.update(value=1)]                    # num_days
@@ -379,7 +390,7 @@ def build_ui() -> gr.Blocks:
             fn=on_confirm_reset,
             outputs=[
                 form_panel, results_panel, summary_html,
-                field_errors,
+                field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
             ] + interest_components,

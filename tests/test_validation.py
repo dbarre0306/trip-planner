@@ -175,6 +175,40 @@ def test_validate_form_collects_multiple_errors():
     assert err_fields == {"destination", "start_date", "num_days", "num_adults", "num_children"}
 
 
+def test_validate_form_rejects_too_few_interests():
+    errors, err_fields = validate_form(**_valid_args(interests=[["Museums"]]))
+
+    assert "Select between 2 and 4 interests" in errors
+    assert "interests" in err_fields
+
+
+def test_validate_form_rejects_too_many_interests():
+    errors, err_fields = validate_form(
+        **_valid_args(interests=[["Museums", "History", "Restaurants"], ["Hiking", "Beaches"]])
+    )
+
+    assert "Select between 2 and 4 interests" in errors
+    assert "interests" in err_fields
+
+
+def test_validate_form_accepts_boundary_interest_counts():
+    errors, err_fields = validate_form(**_valid_args(interests=[["Museums", "History"]]))
+    assert errors == []
+    assert "interests" not in err_fields
+
+    errors, err_fields = validate_form(
+        **_valid_args(interests=[["Museums", "History"], ["Hiking", "Beaches"]])
+    )
+    assert errors == []
+    assert "interests" not in err_fields
+
+
+def test_validate_form_skips_interest_check_when_not_provided():
+    errors, err_fields = validate_form(**_valid_args())
+
+    assert "interests" not in err_fields
+
+
 @patch("trip_planner.validation.chat_completion", return_value="Yes")
 def test_is_valid_destination_returns_true_for_yes(mock_chat_completion):
     assert is_valid_destination("Tucson, AZ") is True

@@ -227,7 +227,7 @@ def _run(coro_factory, *args):
 
 def test_on_schedule_itinerary_yields_validation_errors():
     results = _run(
-        on_schedule_itinerary, "", date(2026, 9, 1), 3, 2, 0
+        on_schedule_itinerary, "", date(2026, 9, 1), 3, 2, 0, ["Hiking", "Museums"]
     )
 
     assert len(results) == 1
@@ -235,18 +235,28 @@ def test_on_schedule_itinerary_yields_validation_errors():
     assert form_panel.get("visible") is True
     assert results_panel.get("visible") is False
     assert "Destination is required" in field_errors
-    assert results[0][4].get("elem_classes") == ["field-error"]
+    assert results[0][5].get("elem_classes") == ["field-error"]
+
+
+def test_on_schedule_itinerary_flags_interests_group_on_too_few_interests():
+    results = _run(
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking"]
+    )
+
+    field_errors = results[0][3]
+    assert "Select between 2 and 4 interests" in field_errors
+    assert results[0][4].get("elem_classes") == ["interests-outer", "field-error"]
 
 
 @patch("trip_planner.app.is_valid_destination", return_value=False)
 def test_on_schedule_itinerary_reports_unknown_destination(mock_is_valid):
     results = _run(
-        on_schedule_itinerary, "Nowhereville", date(2026, 9, 1), 3, 2, 0
+        on_schedule_itinerary, "Nowhereville", date(2026, 9, 1), 3, 2, 0, ["Hiking", "Museums"]
     )
 
     mock_is_valid.assert_called_once_with("Nowhereville")
     assert len(results) == 2
-    status_md = results[-1][9]
+    status_md = results[-1][10]
     assert "Unknown destination" in status_md.get("value", "")
 
 
@@ -257,10 +267,10 @@ def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_
     mock_create_itinerary.return_value = fake_itinerary
 
     results = _run(
-        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking", "Museums"]
     )
 
-    results_html = results[-1][10]
+    results_html = results[-1][11]
     assert "Sabino Canyon" in results_html.get("value", "")
 
 
@@ -272,10 +282,10 @@ def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_
     mock_create_itinerary.return_value = _itinerary()
 
     results = _run(
-        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking"], []
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking"], ["Museums"]
     )
 
-    status_md = results[-1][9]
+    status_md = results[-1][10]
     assert status_md.get("value", "") == ""
 
 
@@ -285,10 +295,10 @@ def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is
     mock_create_itinerary.return_value = _itinerary(days=[_day(venues=[])])
 
     results = _run(
-        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking", "Museums"]
     )
 
-    status_md = results[-1][9]
+    status_md = results[-1][10]
     assert "No itinerary could be generated" in status_md.get("value", "")
 
 
@@ -296,9 +306,9 @@ def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is
 @patch("trip_planner.app.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_reports_exception(mock_is_valid, mock_create_itinerary):
     results = _run(
-        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking", "Museums"]
     )
 
-    status_md = results[-1][9]
+    status_md = results[-1][10]
     assert "An error occurred" in status_md.get("value", "")
     assert "boom" in status_md.get("value", "")
