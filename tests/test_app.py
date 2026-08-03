@@ -1,6 +1,5 @@
 import asyncio
 from datetime import date, datetime, timezone
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -14,32 +13,39 @@ from trip_planner.app import (
     _trip_summary_html,
     on_schedule_itinerary,
 )
+from trip_planner.models import Itinerary, ItineraryDay, ScheduledVenue
 
 
-def _activity(**overrides):
+def _venue_entry(**overrides):
     defaults = dict(
         name="Sabino Canyon",
-        category="outdoors",
+        interest_category="Outdoor Activities",
         duration_minutes=90,
         start_time="09:00",
         estimated_cost_usd=0.0,
         description="A scenic hike.",
-        address="123 Canyon Rd",
+        location="123 Canyon Rd",
         url="https://example.com",
         hours_of_operation="9am-5pm",
     )
     defaults.update(overrides)
-    return SimpleNamespace(**defaults)
+    return ScheduledVenue(**defaults)
 
 
 def _day(**overrides):
-    defaults = dict(day_number=1, date="2026-09-01", cost_usd=25.0, activities=[_activity()])
+    venues = overrides.pop("venues", None)
+    defaults = dict(day_number=1, date="2026-09-01")
     defaults.update(overrides)
-    return SimpleNamespace(**defaults)
+    return ItineraryDay(venues=venues if venues is not None else [_venue_entry()], **defaults)
 
 
-def _itinerary(days=None, total_cost_usd=25.0):
-    return SimpleNamespace(days=days if days is not None else [_day()], total_cost_usd=total_cost_usd)
+def _itinerary(days=None):
+    return Itinerary(
+        destination="Tucson, AZ",
+        num_adults=2,
+        num_children=0,
+        days=days if days is not None else [_day()],
+    )
 
 
 async def _collect(agen):
@@ -150,7 +156,7 @@ def test_trip_summary_html_pluralizes_days_and_party():
 # ── _render_day / _itinerary_to_html ─────────────────────────
 
 def test_render_day_includes_activity_details():
-    day = _day(activities=[_activity(name="El Charro", description="Great tacos.")])
+    day = _day(venues=[_venue_entry(name="El Charro", description="Great tacos.")])
 
     html = _render_day(day, _itinerary())
 
@@ -160,7 +166,7 @@ def test_render_day_includes_activity_details():
 
 
 def test_render_day_falls_back_to_other_badge_for_unknown_category():
-    day = _day(activities=[_activity(category="mystery")])
+    day = _day(venues=[_venue_entry(interest_category="Mystery")])
 
     html = _render_day(day, _itinerary())
 
@@ -173,7 +179,7 @@ def test_render_day_falls_back_to_other_badge_for_unknown_category():
     [(90, "1h 30m"), (60, "1h"), (45, "45m"), (0, "0m")],
 )
 def test_render_day_formats_duration(duration_minutes, expected):
-    day = _day(activities=[_activity(duration_minutes=duration_minutes)])
+    day = _day(venues=[_venue_entry(duration_minutes=duration_minutes)])
 
     html = _render_day(day, _itinerary())
 
@@ -181,7 +187,7 @@ def test_render_day_formats_duration(duration_minutes, expected):
 
 
 def test_render_day_omits_meta_when_activity_has_no_extras():
-    day = _day(activities=[_activity(address=None, url=None, hours_of_operation=None)])
+    day = _day(venues=[_venue_entry(location=None, url=None, hours_of_operation=None)])
 
     html = _render_day(day, _itinerary())
 
@@ -189,7 +195,7 @@ def test_render_day_omits_meta_when_activity_has_no_extras():
 
 
 def test_render_day_escapes_activity_fields():
-    day = _day(activities=[_activity(name="<b>Bold</b>", description="<i>Italic</i>")])
+    day = _day(venues=[_venue_entry(name="<b>Bold</b>", description="<i>Italic</i>")])
 
     html = _render_day(day, _itinerary())
 
@@ -198,7 +204,9 @@ def test_render_day_escapes_activity_fields():
 
 
 def test_itinerary_to_html_includes_total_cost():
-    html = _itinerary_to_html(_itinerary(total_cost_usd=123.45))
+    day = _day(venues=[_venue_entry(estimated_cost_usd=123.45)])
+
+    html = _itinerary_to_html(_itinerary(days=[day]))
 
     assert "$123.45" in html
 
@@ -245,8 +253,8 @@ def test_on_schedule_itinerary_reports_unknown_destination(mock_is_valid):
 @patch("trip_planner.app.create_itinerary")
 @patch("trip_planner.app.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_create_itinerary):
-    fake_itinerary = _itinerary(days=[_day(activities=[_activity(name="Sabino Canyon")])])
-    mock_create_itinerary.return_value = SimpleNamespace(pydantic=fake_itinerary, raw="")
+    fake_itinerary = _itinerary(days=[_day(venues=[_venue_entry(name="Sabino Canyon")])])
+    mock_create_itinerary.return_value = fake_itinerary
 
     results = _run(
         on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0
@@ -261,7 +269,7 @@ def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_
 def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_is_valid, mock_create_itinerary):
     # Regression check: selecting a real interest used to raise AttributeError
     # in _format_interest because Interest had no `examples` field.
-    mock_create_itinerary.return_value = SimpleNamespace(pydantic=_itinerary(), raw="")
+    mock_create_itinerary.return_value = _itinerary()
 
     results = _run(
         on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["Hiking"], []
@@ -273,21 +281,8 @@ def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_
 
 @patch("trip_planner.app.create_itinerary")
 @patch("trip_planner.app.is_valid_destination", return_value=True)
-def test_on_schedule_itinerary_reports_raw_error_message(mock_is_valid, mock_create_itinerary):
-    mock_create_itinerary.return_value = SimpleNamespace(pydantic=None, raw="ERROR: no venues found")
-
-    results = _run(
-        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0
-    )
-
-    status_md = results[-1][9]
-    assert "ERROR: no venues found" in status_md.get("value", "")
-
-
-@patch("trip_planner.app.create_itinerary")
-@patch("trip_planner.app.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is_valid, mock_create_itinerary):
-    mock_create_itinerary.return_value = SimpleNamespace(pydantic=None, raw="")
+    mock_create_itinerary.return_value = _itinerary(days=[_day(venues=[])])
 
     results = _run(
         on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0

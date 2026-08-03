@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from trip_planner.domain import InterestId
 
@@ -37,3 +37,39 @@ class Venue(BaseModel):
     rejection_reason: str | None = None
     estimated_cost_per_adult: float | None = None
     estimated_cost_per_child: float | None = None
+
+class ScheduledVenue(BaseModel):
+    name: str
+    interest_category: str
+    description: str
+    rating: float | None = None
+    location: str | None = None
+    location_type: Literal["STREET_ADDRESS", "PLACE"] | None = None
+    geo_location: GeoLocation | None = None
+    hours_of_operation: str | None = None
+    url: str | None = None
+    start_time: str
+    duration_minutes: int
+    estimated_cost_usd: float
+
+class ItineraryDay(BaseModel):
+    day_number: int
+    date: str
+    venues: list[ScheduledVenue]
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def estimated_cost_usd(self) -> float:
+        return round(sum(venue.estimated_cost_usd for venue in self.venues), 2)
+
+class Itinerary(BaseModel):
+    destination: str
+    num_adults: int
+    num_children: int
+    days: list[ItineraryDay]
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def estimated_cost_usd(self) -> float:
+        return round(sum(day.estimated_cost_usd for day in self.days), 2)
+

@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from trip_planner.domain import InterestId, TravelInfo
-from trip_planner.models import Venue, VenueCandidate
+from trip_planner.models import ItineraryDay, Venue, VenueCandidate
 from trip_planner.trip_planner import create_itinerary, get_all_candidates
 
 
@@ -41,13 +41,17 @@ def test_get_all_candidates_combines_results_across_interests(mock_search_places
     assert candidates == [hiking_candidate, restaurant_candidate]
 
 
+@patch("trip_planner.trip_planner.assemble_itinerary")
 @patch("trip_planner.trip_planner.process_venues")
 @patch("trip_planner.trip_planner.search_places")
-def test_create_itinerary_processes_all_candidates_in_one_call(mock_search_places, mock_process_venues):
+def test_create_itinerary_processes_all_candidates_in_one_call(
+    mock_search_places, mock_process_venues, mock_assemble_itinerary
+):
     hiking_candidate = VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)
     restaurant_candidate = VenueCandidate(name="El Charro", interest_id=InterestId.RESTAURANTS)
     mock_search_places.side_effect = [[hiking_candidate], [restaurant_candidate]]
     mock_process_venues.return_value = ([], [])
+    mock_assemble_itinerary.return_value = []
     travel_info = TravelInfo(
         destination="Tucson, AZ",
         travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
@@ -61,14 +65,17 @@ def test_create_itinerary_processes_all_candidates_in_one_call(mock_search_place
     mock_process_venues.assert_called_once_with(travel_info, [hiking_candidate, restaurant_candidate])
 
 
+@patch("trip_planner.trip_planner.assemble_itinerary")
 @patch("trip_planner.trip_planner.process_venues")
 @patch("trip_planner.trip_planner.search_places")
-def test_create_itinerary_prints_processed_venues(mock_search_places, mock_process_venues, capsys):
+def test_create_itinerary_returns_the_assembled_itinerary(
+    mock_search_places, mock_process_venues, mock_assemble_itinerary
+):
     mock_search_places.return_value = [VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)]
-    mock_process_venues.return_value = (
-        [Venue(name="Sabino Canyon", interest_id=InterestId.HIKING, location="Tucson, AZ")],
-        [],
-    )
+    processed_venues = [Venue(name="Sabino Canyon", interest_id=InterestId.HIKING, location="Tucson, AZ")]
+    mock_process_venues.return_value = (processed_venues, [])
+    itinerary = [ItineraryDay(day_number=1, date="09/01/2026", venues=[])]
+    mock_assemble_itinerary.return_value = itinerary
     travel_info = TravelInfo(
         destination="Tucson, AZ",
         travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
@@ -77,17 +84,21 @@ def test_create_itinerary_prints_processed_venues(mock_search_places, mock_proce
         interest_ids=[InterestId.HIKING],
     )
 
-    create_itinerary(travel_info)
+    result = create_itinerary(travel_info)
 
-    captured = capsys.readouterr()
-    assert "Sabino Canyon" in captured.out
+    mock_assemble_itinerary.assert_called_once_with(travel_info, processed_venues)
+    assert result == itinerary
 
 
+@patch("trip_planner.trip_planner.assemble_itinerary")
 @patch("trip_planner.trip_planner.process_venues")
 @patch("trip_planner.trip_planner.search_places")
-def test_create_itinerary_reports_processing_failures(mock_search_places, mock_process_venues, capsys):
+def test_create_itinerary_reports_processing_failures(
+    mock_search_places, mock_process_venues, mock_assemble_itinerary, capsys
+):
     mock_search_places.return_value = [VenueCandidate(name="Broken Venue", interest_id=InterestId.HIKING)]
     mock_process_venues.return_value = ([], [ValueError("boom")])
+    mock_assemble_itinerary.return_value = []
     travel_info = TravelInfo(
         destination="Tucson, AZ",
         travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],

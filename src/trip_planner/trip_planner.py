@@ -1,5 +1,6 @@
 from trip_planner.domain import TravelInfo
-from trip_planner.models import VenueCandidate
+from trip_planner.itinerary import assemble_itinerary
+from trip_planner.models import Itinerary, VenueCandidate
 from trip_planner.serper_places import search_places
 from trip_planner.venue_processing import process_venues
 
@@ -11,14 +12,11 @@ def get_all_candidates(travel_info: TravelInfo) -> list[VenueCandidate]:
     return candidates
 
 
-def create_itinerary(travel_info: TravelInfo):
+def create_itinerary(travel_info: TravelInfo) -> Itinerary:
     candidates = get_all_candidates(travel_info)
-    for candidate in candidates:
-        print(candidate.model_dump_json(indent=2))
-    print("--------------")
 
     venues, errors = process_venues(travel_info, candidates)
-    for venue in venues:
-        print(venue.model_dump_json(indent=2))
     for error in errors:
         print(f"Failed to process venue: {error}")
+
+    return assemble_itinerary(travel_info, venues)

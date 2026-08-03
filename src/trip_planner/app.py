@@ -14,21 +14,7 @@ from trip_planner.validation import is_valid_destination, validate_form
 load_dotenv(override=True)
 
 
-_BADGE_CLASS = {
-    "food": "itin-badge-food",
-    "culture": "itin-badge-culture",
-    "outdoors": "itin-badge-outdoors",
-    "entertainment": "itin-badge-entertainment",
-    "other": "itin-badge-other",
-}
-
-_BADGE_LABEL = {
-    "food": "Food",
-    "culture": "Culture",
-    "outdoors": "Outdoors",
-    "entertainment": "Entertainment",
-    "other": "Other",
-}
+_BADGE_CLASS = {category.label: f"itin-badge-{category.id.value}" for category in CATEGORIES}
 
 
 def _fmt_date(start_date) -> str:
@@ -116,39 +102,38 @@ def _render_day(day, itinerary) -> str:
         '<div class="itin-day">',
         '<div class="itin-day-header">',
         f'<span class="itin-day-label">Day {day.day_number} — {e(day.date)}</span>',
-        f'<span class="itin-day-cost">${day.cost_usd:,.2f}</span>',
+        f'<span class="itin-day-cost">${day.estimated_cost_usd:,.2f}</span>',
         '</div>',
     ]
-    for act in day.activities:
-        h, m = divmod(act.duration_minutes, 60)
+    for venue in day.venues:
+        h, m = divmod(venue.duration_minutes, 60)
         duration_str = f"{h}h {m}m" if h and m else f"{h}h" if h else f"{m}m"
-        badge_cls = _BADGE_CLASS.get(act.category, "itin-badge-other")
-        badge_lbl = _BADGE_LABEL.get(act.category, act.category.title())
+        badge_cls = _BADGE_CLASS.get(venue.interest_category, "itin-badge-other")
 
         meta_parts = []
-        if act.address:
-            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(act.address)}"
+        if venue.location:
+            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(venue.location)}"
             meta_parts.append(
                 f'<a class="itin-meta-link" href="{maps_url}" target="_blank" rel="noopener noreferrer">'
-                f'\U0001f4cd {e(act.address)}</a>'
+                f'\U0001f4cd {e(venue.location)}</a>'
             )
-        if act.url:
-            meta_parts.append(f'<a class="itin-meta-link" href="{e(act.url)}" target="_blank" rel="noopener noreferrer">\U0001f517 Website</a>')
-        if act.hours_of_operation:
-            meta_parts.append(f'<span class="itin-meta-item">\U0001f550 {e(act.hours_of_operation)}</span>')
+        if venue.url:
+            meta_parts.append(f'<a class="itin-meta-link" href="{e(venue.url)}" target="_blank" rel="noopener noreferrer">\U0001f517 Website</a>')
+        if venue.hours_of_operation:
+            meta_parts.append(f'<span class="itin-meta-item">\U0001f550 {e(venue.hours_of_operation)}</span>')
         meta_html = f'<div class="itin-card-meta">{"".join(meta_parts)}</div>' if meta_parts else ""
 
         parts += [
             '<div class="itin-card">',
             '<div class="itin-card-top">',
-            f'<span class="itin-card-name">{e(act.name)}</span>',
-            f'<span class="itin-badge {badge_cls}">{e(badge_lbl)}</span>',
+            f'<span class="itin-card-name">{e(venue.name)}</span>',
+            f'<span class="itin-badge {badge_cls}">{e(venue.interest_category)}</span>',
             '</div>',
             '<div class="itin-card-timing">',
-            f'<span class="itin-timing-detail">{e(_to_12h(act.start_time))} &nbsp;·&nbsp; {e(duration_str)}</span>',
-            f'<span class="itin-card-cost">${act.estimated_cost_usd:,.2f}</span>',
+            f'<span class="itin-timing-detail">{e(_to_12h(venue.start_time))} &nbsp;·&nbsp; {e(duration_str)}</span>',
+            f'<span class="itin-card-cost">${venue.estimated_cost_usd:,.2f}</span>',
             '</div>',
-            f'<p class="itin-card-desc">{e(act.description)}</p>',
+            f'<p class="itin-card-desc">{e(venue.description)}</p>',
             meta_html,
             '</div>',
         ]
@@ -161,7 +146,7 @@ def _itinerary_to_html(itinerary) -> str:
     mid = (len(days) + 1) // 2
     left = "\n".join(_render_day(d, itinerary) for d in days[:mid])
     right = "\n".join(_render_day(d, itinerary) for d in days[mid:])
-    total = f'<div class="itin-total">Total estimated cost: <strong>${itinerary.total_cost_usd:,.2f}</strong></div>'
+    total = f'<div class="itin-total">Total estimated cost: <strong>${itinerary.estimated_cost_usd:,.2f}</strong></div>'
     grid = f'<div class="itin-days-grid"><div class="itin-col">{left}</div><div class="itin-col">{right}</div></div>'
     return f'<div class="itin-wrap">{total}{grid}</div>'
 
@@ -238,13 +223,13 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
     )
 
     try:
-        crew_task = asyncio.create_task(
+        itinerary_task = asyncio.create_task(
             asyncio.to_thread(create_itinerary, travel_info)
         )
         n_dot = 0
-        while not crew_task.done():
+        while not itinerary_task.done():
             try:
-                await asyncio.wait_for(asyncio.shield(crew_task), timeout=30)
+                await asyncio.wait_for(asyncio.shield(itinerary_task), timeout=30)
             except asyncio.TimeoutError:
                 n_dot = (n_dot % 3) + 1
                 yield (
@@ -253,7 +238,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
                     + [gr.update()]
                     + [gr.update() for _ in range(n_interests)]
                 )
-        result = crew_task.result()
+        itinerary = itinerary_task.result()
     except Exception as exc:
         yield (
             [gr.update()]                                        # form_panel
@@ -267,10 +252,8 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         )
         return
 
-    itinerary = result.pydantic
-    if itinerary is None:
-        raw = result.raw or ""
-        msg = raw if raw.startswith("ERROR:") else "No itinerary could be generated. Try adjusting your interests or dates."
+    if not any(day.venues for day in itinerary.days):
+        msg = "No itinerary could be generated. Try adjusting your interests or dates."
         yield (
             [gr.update()]                                        # form_panel
             + [gr.update()]                                      # results_panel
