@@ -62,7 +62,9 @@ def test_process_venue_maps_fields_and_defaults(
     mock_generate_description.assert_called_once_with(
         "Sabino Canyon", InterestId.HIKING, "Tucson, AZ", ["A scenic hiking spot"]
     )
-    mock_extract_venue_details.assert_called_once_with("Sabino Canyon", ["A scenic hiking spot"])
+    mock_extract_venue_details.assert_called_once_with(
+        "Sabino Canyon", "Tucson, AZ", ["A scenic hiking spot"]
+    )
     mock_estimate_duration_minutes.assert_not_called()
     mock_determine_meal_tags.assert_called_once_with(
         InterestId.HIKING, "Sabino Canyon", ["A scenic hiking spot"], "Daily 7am-6pm"

@@ -20,9 +20,15 @@ _EXTRACTION_INSTRUCTIONS = (
     "museum, and a trail within a recreation area should resolve to the recreation area, not "
     "the trail's own name. Never use the venue name itself as the location. If neither can be "
     "found, use null.\n\n"
-    "location_type: Classify the value you gave for location. Use \"STREET_ADDRESS\" if it is a "
-    "street address, \"PLACE\" if it is a containing place or area name, or null if location "
-    "itself is null.\n\n"
+    "If the street address found in the notes contains only the street portion (e.g. "
+    "\"20 Main St\", with no city, state, or equivalent), combine it with the venue's "
+    "destination to form a full address (e.g. \"20 Main St, Springfield, IL\"). If you cannot "
+    "confidently complete it into a full address this way, fall back to a containing place or "
+    "area name as described above instead.\n\n"
+    "location_type: Classify the value you gave for location. Use \"STREET_ADDRESS\" only when "
+    "it is a full address (street plus city, state, or equivalent) — never for a street-only "
+    "value. Use \"PLACE\" if it is a containing place or area name, or null if location itself "
+    "is null.\n\n"
     "hours_of_operation: Unlike the other fields, you are not limited to the notes for this "
     "one. If hours are stated in the notes, use them exactly as stated, in whatever format "
     "they appear. Otherwise, rely on your own general knowledge of this specific venue to give "
@@ -115,9 +121,12 @@ def _resolve_location(name: str, raw_location: str | None) -> str | None:
     return raw_location
 
 
-def extract_venue_details(name: str, notes: list[str]) -> VenueDetails:
+def extract_venue_details(name: str, destination: str, notes: list[str]) -> VenueDetails:
     notes_text = "\n".join(f"- {note}" for note in notes) if notes else "(none provided)"
-    prompt = f"Venue name: {name}\n\nNotes:\n{notes_text}\n\n{_EXTRACTION_INSTRUCTIONS}"
+    prompt = (
+        f"Venue name: {name}\nDestination: {destination}\n\nNotes:\n{notes_text}\n\n"
+        f"{_EXTRACTION_INSTRUCTIONS}"
+    )
 
     response = chat_completion([{"role": "user", "content": prompt}])
     data = _parse_json_object(response)

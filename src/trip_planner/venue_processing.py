@@ -26,7 +26,7 @@ def process_venue(travel_info: TravelInfo, candidate: VenueCandidate) -> Venue:
     description = generate_description(
         candidate.name, candidate.interest_id, travel_info.destination, lookup_result.notes
     )
-    details = extract_venue_details(candidate.name, lookup_result.notes)
+    details = extract_venue_details(candidate.name, travel_info.destination, lookup_result.notes)
     duration_minutes = details.duration_minutes
     if duration_minutes is None:
         duration_minutes = estimate_duration_minutes(candidate.name, details.location)
