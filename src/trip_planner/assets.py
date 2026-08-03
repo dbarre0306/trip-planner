@@ -214,6 +214,7 @@ CSS = """
     margin-bottom: 4px;
 }
 .itin-card-name { font-weight: 700; font-size: 0.975rem; line-height: 1.3; }
+.itin-card-rating { font-weight: 500; font-size: 0.84rem; opacity: 0.75; margin-left: 6px; white-space: nowrap; }
 .itin-badge {
     font-size: 0.68rem;
     font-weight: 600;

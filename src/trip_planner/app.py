@@ -112,7 +112,11 @@ def _render_day(day, itinerary) -> str:
 
         meta_parts = []
         if venue.location:
-            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(venue.location)}"
+            if venue.location_type == "PLACE" and venue.geo_location:
+                maps_query = f"{venue.geo_location.latitude},{venue.geo_location.longitude}"
+            else:
+                maps_query = venue.location
+            maps_url = f"https://www.google.com/maps/search/?api=1&query={quote_plus(maps_query)}"
             meta_parts.append(
                 f'<a class="itin-meta-link" href="{maps_url}" target="_blank" rel="noopener noreferrer">'
                 f'\U0001f4cd {e(venue.location)}</a>'
@@ -122,11 +126,16 @@ def _render_day(day, itinerary) -> str:
         if venue.hours_of_operation:
             meta_parts.append(f'<span class="itin-meta-item">\U0001f550 {e(venue.hours_of_operation)}</span>')
         meta_html = f'<div class="itin-card-meta">{"".join(meta_parts)}</div>' if meta_parts else ""
+        rating_html = (
+            f'<span class="itin-card-rating">⭐ {venue.rating:.1f}</span>'
+            if venue.rating is not None
+            else ""
+        )
 
         parts += [
             '<div class="itin-card">',
             '<div class="itin-card-top">',
-            f'<span class="itin-card-name">{e(venue.name)}</span>',
+            f'<span class="itin-card-name">{e(venue.name)}{rating_html}</span>',
             f'<span class="itin-badge {badge_cls}">{e(venue.interest_category)}</span>',
             '</div>',
             '<div class="itin-card-timing">',
