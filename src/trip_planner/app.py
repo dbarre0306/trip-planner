@@ -80,6 +80,19 @@ def _trip_summary_html(
         f'<div class="trip-summary-tags">{pills}</div>'
         f'</div>'
         f'<div class="trip-plan-ctrl">'
+        f'<div class="trip-modify-ctrl">'
+        f'<button class="trip-modify-btn"{btn_disabled} onclick="showModifyConfirm()">'
+        f'Modify Trip'
+        f'</button>'
+        f'<div class="trip-confirm-box" style="display:none">'
+        f'<span class="trip-confirm-msg">This will take you back to the form to make changes.</span>'
+        f'<div class="trip-confirm-btns">'
+        f'<button class="trip-confirm-yes" onclick="triggerConfirmModify()">Yes, modify trip</button>'
+        f'<button class="trip-confirm-no" onclick="hideModifyConfirm()">Cancel</button>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'<div class="trip-reset-ctrl">'
         f'<button class="trip-new-btn"{btn_disabled} onclick="showTripConfirm()">'
         f'Plan a New Trip'
         f'</button>'
@@ -88,6 +101,7 @@ def _trip_summary_html(
         f'<div class="trip-confirm-btns">'
         f'<button class="trip-confirm-yes" onclick="triggerConfirmReset()">Yes, start over</button>'
         f'<button class="trip-confirm-no" onclick="hideTripConfirm()">Cancel</button>'
+        f'</div>'
         f'</div>'
         f'</div>'
         f'</div>'
@@ -343,6 +357,13 @@ def build_ui() -> gr.Blocks:
                 elem_id="confirm-reset-trigger",
                 elem_classes=["hidden-trigger"],
             )
+            # Clicking "Yes, modify trip" in the inline confirmation calls
+            # triggerConfirmModify() (HEAD JS), which clicks this hidden Gradio button.
+            confirm_modify_btn = gr.Button(
+                "",
+                elem_id="confirm-modify-trigger",
+                elem_classes=["hidden-trigger"],
+            )
             status_md    = gr.Markdown()
             results_html = gr.HTML(container=False)
 
@@ -387,6 +408,20 @@ def build_ui() -> gr.Blocks:
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
             ] + interest_components,
+        )
+
+        # ── "Yes, modify trip" in the HTML confirmation → back to form ───
+        # Unlike on_confirm_reset, field values are left untouched so the
+        # form reappears pre-filled with the trip currently on screen.
+        def on_confirm_modify():
+            return (
+                gr.update(visible=True),   # form_panel
+                gr.update(visible=False),  # results_panel
+            )
+
+        confirm_modify_btn.click(
+            fn=on_confirm_modify,
+            outputs=[form_panel, results_panel],
         )
 
         gr.HTML(

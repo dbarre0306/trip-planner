@@ -145,6 +145,33 @@ def test_trip_summary_html_button_enabled_when_requested():
     assert "disabled" not in html
 
 
+def test_trip_summary_html_includes_modify_trip_button():
+    html = _trip_summary_html("Tucson, AZ", date(2026, 9, 1), 3, 2, 0, [])
+
+    assert "Modify Trip" in html
+    assert 'class="trip-modify-btn"' in html
+
+
+def test_trip_summary_html_modify_button_disabled_by_default():
+    html = _trip_summary_html("Tucson, AZ", date(2026, 9, 1), 3, 2, 0, [])
+
+    modify_btn = html.split('class="trip-modify-btn"', 1)[1]
+    assert modify_btn.startswith(" disabled")
+
+
+def test_trip_summary_html_modify_button_enabled_when_requested():
+    html = _trip_summary_html("Tucson, AZ", date(2026, 9, 1), 3, 2, 0, [], button_enabled=True)
+
+    modify_btn = html.split('class="trip-modify-btn"', 1)[1]
+    assert not modify_btn.startswith(" disabled")
+
+
+def test_trip_summary_html_modify_trip_precedes_plan_a_new_trip():
+    html = _trip_summary_html("Tucson, AZ", date(2026, 9, 1), 3, 2, 0, [], button_enabled=True)
+
+    assert html.index("Modify Trip") < html.index("Plan a New Trip")
+
+
 def test_trip_summary_html_pluralizes_days_and_party():
     html = _trip_summary_html("Tucson, AZ", date(2026, 9, 1), 1, 1, 1, [])
 

@@ -22,12 +22,16 @@ def test_head_defines_functions_wired_to_app_onclick_handlers():
     assert "function showTripConfirm()" in HEAD
     assert "function hideTripConfirm()" in HEAD
     assert "function triggerConfirmReset()" in HEAD
+    assert "function showModifyConfirm()" in HEAD
+    assert "function hideModifyConfirm()" in HEAD
+    assert "function triggerConfirmModify()" in HEAD
 
 
 def test_head_targets_elem_ids_used_by_app():
     # app.py sets these elem_ids on live components; the JS must target the same ids.
     assert 'getElementById("start-date-field")' in HEAD
     assert "getElementById('confirm-reset-trigger')" in HEAD
+    assert "getElementById('confirm-modify-trigger')" in HEAD
 
 
 def test_css_defines_classes_referenced_by_app_html():
@@ -41,6 +45,9 @@ def test_css_defines_classes_referenced_by_app_html():
         ".trip-summary-tag",
         ".trip-plan-ctrl",
         ".trip-new-btn",
+        ".trip-modify-ctrl",
+        ".trip-modify-btn",
+        ".trip-reset-ctrl",
         ".trip-confirm-box",
         ".trip-confirm-msg",
         ".trip-confirm-btns",

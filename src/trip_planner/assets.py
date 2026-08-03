@@ -116,6 +116,26 @@ CSS = """
 }
 .trip-new-btn:hover:not(:disabled) { background: #15803d; border-color: #15803d; }
 .trip-new-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.trip-modify-btn {
+    background: #2563eb;
+    color: #fff;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.trip-modify-btn:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+.trip-modify-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.trip-modify-ctrl,
+.trip-reset-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
 .trip-confirm-box {
     flex-direction: column;
     align-items: flex-end;
@@ -290,14 +310,14 @@ CSS = """
 HEAD = """
 <script>
 function showTripConfirm() {
-    var ctrl = document.querySelector('.trip-plan-ctrl');
+    var ctrl = document.querySelector('.trip-reset-ctrl');
     if (!ctrl) return;
     ctrl.querySelector('.trip-new-btn').style.display = 'none';
     var box = ctrl.querySelector('.trip-confirm-box');
     box.style.display = 'flex';
 }
 function hideTripConfirm() {
-    var ctrl = document.querySelector('.trip-plan-ctrl');
+    var ctrl = document.querySelector('.trip-reset-ctrl');
     if (!ctrl) return;
     ctrl.querySelector('.trip-new-btn').style.display = '';
     ctrl.querySelector('.trip-confirm-box').style.display = 'none';
@@ -305,6 +325,27 @@ function hideTripConfirm() {
 function triggerConfirmReset() {
     hideTripConfirm();
     var el = document.getElementById('confirm-reset-trigger');
+    if (!el) return;
+    // elem_id may land on the <button> itself or on a wrapper div — handle both
+    var b = el.tagName === 'BUTTON' ? el : el.querySelector('button');
+    if (b) b.click();
+}
+function showModifyConfirm() {
+    var ctrl = document.querySelector('.trip-modify-ctrl');
+    if (!ctrl) return;
+    ctrl.querySelector('.trip-modify-btn').style.display = 'none';
+    var box = ctrl.querySelector('.trip-confirm-box');
+    box.style.display = 'flex';
+}
+function hideModifyConfirm() {
+    var ctrl = document.querySelector('.trip-modify-ctrl');
+    if (!ctrl) return;
+    ctrl.querySelector('.trip-modify-btn').style.display = '';
+    ctrl.querySelector('.trip-confirm-box').style.display = 'none';
+}
+function triggerConfirmModify() {
+    hideModifyConfirm();
+    var el = document.getElementById('confirm-modify-trigger');
     if (!el) return;
     // elem_id may land on the <button> itself or on a wrapper div — handle both
     var b = el.tagName === 'BUTTON' ? el : el.querySelector('button');
