@@ -326,8 +326,7 @@ def build_ui() -> gr.Blocks:
                 _category_by_id = {c.id: c for c in CATEGORIES}
                 with gr.Group(elem_classes=["interests-outer"]) as interests_group:
                     gr.HTML(
-                        '<label>Select Your Interests</label>'
-                        '<span class="interests-hint">Choose 2–4</span>',
+                        '<label>Select from 2 to 4 interests</label>',
                         elem_classes=["interests-label"],
                     )
                     for key in (CategoryId.FOOD, CategoryId.CULTURE, CategoryId.OUTDOORS, CategoryId.ENTERTAINMENT, CategoryId.OTHER):

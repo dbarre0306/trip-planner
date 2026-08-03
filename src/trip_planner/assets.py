@@ -29,11 +29,6 @@ CSS = """
     background: var(--block-background-fill);
     padding: 0 !important;
 }
-.interests-hint {
-    color: var(--body-text-color-subdued) !important;
-    font-size: 0.85em;
-    margin-left: 6px;
-}
 .interests-outer.field-error {
     border: 1px solid red !important;
     border-radius: 8px;

@@ -178,7 +178,7 @@ def test_validate_form_collects_multiple_errors():
 def test_validate_form_rejects_too_few_interests():
     errors, err_fields = validate_form(**_valid_args(interests=[["Museums"]]))
 
-    assert "Select between 2 and 4 interests" in errors
+    assert "Select from 2 to 4 interests" in errors
     assert "interests" in err_fields
 
 
@@ -187,7 +187,7 @@ def test_validate_form_rejects_too_many_interests():
         **_valid_args(interests=[["Museums", "History", "Restaurants"], ["Hiking", "Beaches"]])
     )
 
-    assert "Select between 2 and 4 interests" in errors
+    assert "Select from 2 to 4 interests" in errors
     assert "interests" in err_fields
 
 

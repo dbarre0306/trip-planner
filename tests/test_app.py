@@ -244,7 +244,7 @@ def test_on_schedule_itinerary_flags_interests_group_on_too_few_interests():
     )
 
     field_errors = results[0][3]
-    assert "Select between 2 and 4 interests" in field_errors
+    assert "Select from 2 to 4 interests" in field_errors
     assert results[0][4].get("elem_classes") == ["interests-outer", "field-error"]
 
 

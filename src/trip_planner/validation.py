@@ -53,7 +53,7 @@ def validate_form(
     if interests is not None:
         num_interests = sum(len(group or []) for group in interests)
         if num_interests < 2 or num_interests > 4:
-            errors.append("Select between 2 and 4 interests")
+            errors.append("Select from 2 to 4 interests")
             err_fields.add("interests")
 
     return errors, err_fields
