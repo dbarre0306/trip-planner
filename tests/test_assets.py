@@ -80,6 +80,14 @@ def test_css_defines_classes_referenced_by_app_html():
         ".page-footer",
         ".field-error",
         ".hidden-trigger",
+        ".trip-progress-wrap",
+        ".trip-progress",
+        ".trip-progress-step",
+        ".trip-progress-icon",
+        ".trip-progress-icon--done",
+        ".trip-progress-icon--pending",
+        ".trip-progress-icon--spinner",
+        ".trip-progress-label",
     ]
     for css_class in expected_classes:
         assert css_class in CSS, f"expected {css_class} to be defined in CSS"

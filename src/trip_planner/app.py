@@ -1,5 +1,6 @@
 import asyncio
 import html as _html
+import queue
 from turtle import st
 from urllib.parse import quote_plus
 import gradio as gr
@@ -16,7 +17,11 @@ from trip_planner.domain import (
     choices_for,
     find_interest_by_id,
 )
-from trip_planner.trip_planner import create_itinerary
+from trip_planner.trip_planner import (
+    STAGE_PROCESSING_COMPLETE,
+    STAGE_SEARCH_COMPLETE,
+    create_itinerary,
+)
 from trip_planner.validation import capitalize_destination, is_valid_destination, validate_form
 
 load_dotenv(override=True)
@@ -173,6 +178,34 @@ def _render_day(day, itinerary) -> str:
     return "\n".join(parts)
 
 
+_STEPPER_STAGES = [
+    "Searching for venues",
+    "Researching venues and estimating costs",
+    "Building your itinerary",
+]
+
+_POLL_INTERVAL_SECONDS = 0.5
+
+
+def _progress_html(active_index: int) -> str:
+    e = _html.escape
+    steps = []
+    for i, label in enumerate(_STEPPER_STAGES):
+        if i < active_index:
+            state, icon = "done", '<span class="trip-progress-icon trip-progress-icon--done">✓</span>'
+        elif i == active_index:
+            state, icon = "active", '<span class="trip-progress-icon trip-progress-icon--spinner"></span>'
+        else:
+            state, icon = "pending", '<span class="trip-progress-icon trip-progress-icon--pending"></span>'
+        steps.append(
+            f'<div class="trip-progress-step trip-progress-step--{state}">'
+            f'{icon}'
+            f'<span class="trip-progress-label">{e(label)}</span>'
+            f'</div>'
+        )
+    return f'<div class="trip-progress-wrap"><div class="trip-progress">{"".join(steps)}</div></div>'
+
+
 def _itinerary_to_html(itinerary) -> str:
     days = itinerary.days
     mid = (len(days) + 1) // 2
@@ -189,7 +222,10 @@ def _itinerary_to_html(itinerary) -> str:
 #    destination, start_date, num_days, num_adults, num_children,
 #    status_md, results_html]
 #   + interest_components
-# = 12 + n_interests items
+#   + [progress_html]
+# = 13 + n_interests items
+# progress_html is appended last (after interest_components) so existing
+# fixed-index positions never shift when it's added.
 
 async def on_schedule_itinerary(destination, start_date, num_days, num_adults, num_children, *interests):
     errors, err_fields = validate_form(destination, start_date, num_days, num_adults, num_children, list(interests))
@@ -223,6 +259,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(value="")]                              # status_md
             + [gr.update(value="")]                              # results_html
             + [gr.update() for _ in range(n_interests)]
+            + [gr.update(value="")]                              # progress_html
         )
         return
 
@@ -237,9 +274,10 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(elem_classes=["interests-outer"])]         # interests_group
         + [gr.update(value=destination, elem_classes=[])]       # destination (capitalized)
         + [gr.update(elem_classes=[]) for _ in range(4)]        # clear other field error classes
-        + [gr.update(value="Researching your destination…")]     # status_md
+        + [gr.update(value="")]                                  # status_md
         + [gr.update(value="")]                                  # results_html
         + [gr.update() for _ in range(n_interests)]
+        + [gr.update(value=_progress_html(0))]                   # progress_html
     )
 
     selected_values = [item for group in interests for item in (group or [])]
@@ -251,22 +289,41 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         interest_ids=[InterestId(v) for v in selected_values]
     )
 
+    progress_queue: queue.Queue[tuple[str, int | None]] = queue.Queue()
+
+    def _on_stage(event: str, count: int | None = None) -> None:
+        progress_queue.put_nowait((event, count))
+
     try:
         itinerary_task = asyncio.create_task(
-            asyncio.to_thread(create_itinerary, travel_info)
+            asyncio.to_thread(create_itinerary, travel_info, on_stage=_on_stage)
         )
-        n_dot = 0
+        active_index = 0
         while not itinerary_task.done():
             try:
-                await asyncio.wait_for(asyncio.shield(itinerary_task), timeout=30)
+                await asyncio.wait_for(asyncio.shield(itinerary_task), timeout=_POLL_INTERVAL_SECONDS)
             except asyncio.TimeoutError:
-                n_dot = (n_dot % 3) + 1
-                yield (
-                    [gr.update() for _ in range(10)]
-                    + [gr.update(value=f"Researching your destination{'.' * n_dot}")]
-                    + [gr.update()]
-                    + [gr.update() for _ in range(n_interests)]
-                )
+                pass
+            if itinerary_task.done():
+                break
+
+            try:
+                while True:
+                    event, _count = progress_queue.get_nowait()
+                    if event == STAGE_SEARCH_COMPLETE:
+                        active_index = 1
+                    elif event == STAGE_PROCESSING_COMPLETE:
+                        active_index = 2
+            except queue.Empty:
+                pass
+
+            yield (
+                [gr.update() for _ in range(10)]
+                + [gr.update()]                                  # status_md
+                + [gr.update()]                                  # results_html
+                + [gr.update() for _ in range(n_interests)]
+                + [gr.update(value=_progress_html(active_index))]  # progress_html
+            )
         itinerary = itinerary_task.result()
     except Exception as exc:
         yield (
@@ -279,6 +336,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(value=f"**An error occurred:** {exc}")]
             + [gr.update(value="")]
             + [gr.update() for _ in range(n_interests)]
+            + [gr.update(value="")]                              # progress_html
         )
         return
 
@@ -294,6 +352,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(value=f"**{msg}**")]
             + [gr.update(value="")]
             + [gr.update() for _ in range(n_interests)]
+            + [gr.update(value="")]                              # progress_html
         )
         return
 
@@ -307,6 +366,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(value="")]                                  # status_md
         + [gr.update(value=_itinerary_to_html(itinerary))]      # results_html
         + [gr.update() for _ in range(n_interests)]
+        + [gr.update(value="")]                                  # progress_html
     )
 
 
@@ -375,6 +435,7 @@ def build_ui() -> gr.Blocks:
             )
             status_md    = gr.Markdown()
             results_html = gr.HTML(container=False)
+            progress_html = gr.HTML(container=False)
 
         n_interests = len(interest_components)
 
@@ -387,7 +448,7 @@ def build_ui() -> gr.Blocks:
                 field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
-            ] + interest_components,
+            ] + interest_components + [progress_html],
             show_progress="hidden",
         )
 
@@ -407,6 +468,7 @@ def build_ui() -> gr.Blocks:
                 + [gr.update(value="")]                   # status_md
                 + [gr.update(value="")]                   # results_html
                 + [gr.update(value=[]) for _ in range(n_interests)]
+                + [gr.update(value="")]                   # progress_html
             )
 
         confirm_reset_btn.click(
@@ -416,7 +478,7 @@ def build_ui() -> gr.Blocks:
                 field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
-            ] + interest_components,
+            ] + interest_components + [progress_html],
         )
 
         # ── "Yes, modify trip" in the HTML confirmation → back to form ───

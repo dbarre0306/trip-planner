@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import date, datetime, timezone
 from unittest.mock import patch
 
@@ -7,6 +8,7 @@ import pytest
 from trip_planner.app import (
     _fmt_date,
     _itinerary_to_html,
+    _progress_html,
     _render_day,
     _to_12h,
     _travel_dates,
@@ -14,6 +16,7 @@ from trip_planner.app import (
     on_schedule_itinerary,
 )
 from trip_planner.models import Itinerary, ItineraryDay, ScheduledVenue
+from trip_planner.trip_planner import STAGE_BUILD_COMPLETE, STAGE_PROCESSING_COMPLETE, STAGE_SEARCH_COMPLETE
 
 
 def _venue_entry(**overrides):
@@ -246,6 +249,19 @@ def test_itinerary_to_html_splits_days_across_two_columns():
     assert html.count("itin-day-header") == 3
 
 
+# ── _progress_html ───────────────────────────────────────────
+
+@pytest.mark.parametrize("active_index", [0, 1, 2])
+def test_progress_html_marks_exactly_one_active_step(active_index):
+    html = _progress_html(active_index)
+
+    assert html.count("trip-progress-step--active") == 1
+    assert html.count("trip-progress-step--done") == active_index
+    assert html.count("trip-progress-step--pending") == 2 - active_index
+    for label in ("Searching for venues", "Researching venues and estimating costs", "Building your itinerary"):
+        assert label in html
+
+
 # ── on_schedule_itinerary ─────────────────────────────────────
 
 def _run(coro_factory, *args):
@@ -263,6 +279,7 @@ def test_on_schedule_itinerary_yields_validation_errors():
     assert results_panel.get("visible") is False
     assert "Destination is required" in field_errors
     assert results[0][5].get("elem_classes") == ["field-error"]
+    assert results[0][-1].get("value", "") == ""
 
 
 def test_on_schedule_itinerary_flags_interests_group_on_too_few_interests():
@@ -304,6 +321,36 @@ def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_
 
     results_html = results[-1][11]
     assert "Sabino Canyon" in results_html.get("value", "")
+    assert results[-1][-1].get("value", "") == ""
+    assert "trip-progress-step--active" in results[0][-1].get("value", "")
+
+
+@patch("trip_planner.app.create_itinerary")
+@patch("trip_planner.app.is_valid_destination", return_value=True)
+def test_on_schedule_itinerary_advances_stepper_through_stages(
+    mock_is_valid, mock_create_itinerary, monkeypatch
+):
+    monkeypatch.setattr("trip_planner.app._POLL_INTERVAL_SECONDS", 0.01)
+
+    def fake_create_itinerary(travel_info, *, on_stage=None):
+        on_stage(STAGE_SEARCH_COMPLETE, 1)
+        time.sleep(0.05)
+        on_stage(STAGE_PROCESSING_COMPLETE, None)
+        time.sleep(0.05)
+        on_stage(STAGE_BUILD_COMPLETE, None)
+        return _itinerary()
+
+    mock_create_itinerary.side_effect = fake_create_itinerary
+
+    results = _run(
+        on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["hiking", "museums"]
+    )
+
+    progress_values = [r[-1].get("value", "") for r in results]
+    assert any(
+        "trip-progress-step--active" in v and "Researching venues and estimating costs" in v
+        for v in progress_values
+    )
 
 
 @patch("trip_planner.app.create_itinerary")
@@ -319,6 +366,7 @@ def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_
 
     status_md = results[-1][10]
     assert status_md.get("value", "") == ""
+    assert results[-1][-1].get("value", "") == ""
 
 
 @patch("trip_planner.app.create_itinerary")
@@ -332,6 +380,7 @@ def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is
 
     status_md = results[-1][10]
     assert "No itinerary could be generated" in status_md.get("value", "")
+    assert results[-1][-1].get("value", "") == ""
 
 
 @patch("trip_planner.app.create_itinerary", side_effect=RuntimeError("boom"))
@@ -344,3 +393,4 @@ def test_on_schedule_itinerary_reports_exception(mock_is_valid, mock_create_itin
     status_md = results[-1][10]
     assert "An error occurred" in status_md.get("value", "")
     assert "boom" in status_md.get("value", "")
+    assert results[-1][-1].get("value", "") == ""
