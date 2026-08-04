@@ -2,7 +2,13 @@ from unittest.mock import patch
 
 from trip_planner.domain import InterestId, TravelInfo
 from trip_planner.models import ItineraryDay, Venue, VenueCandidate
-from trip_planner.trip_planner import create_itinerary, get_all_candidates
+from trip_planner.trip_planner import (
+    STAGE_BUILD_COMPLETE,
+    STAGE_PROCESSING_COMPLETE,
+    STAGE_SEARCH_COMPLETE,
+    create_itinerary,
+    get_all_candidates,
+)
 
 
 @patch("trip_planner.trip_planner.search_places")
@@ -111,3 +117,30 @@ def test_create_itinerary_reports_processing_failures(
 
     captured = capsys.readouterr()
     assert "boom" in captured.out
+
+
+@patch("trip_planner.trip_planner.assemble_itinerary")
+@patch("trip_planner.trip_planner.process_venues")
+@patch("trip_planner.trip_planner.search_places")
+def test_create_itinerary_reports_stages_in_order(
+    mock_search_places, mock_process_venues, mock_assemble_itinerary
+):
+    mock_search_places.return_value = [VenueCandidate(name="Sabino Canyon", interest_id=InterestId.HIKING)]
+    mock_process_venues.return_value = ([], [])
+    mock_assemble_itinerary.return_value = []
+    travel_info = TravelInfo(
+        destination="Tucson, AZ",
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
+        num_adults=2,
+        num_children=0,
+        interest_ids=[InterestId.HIKING],
+    )
+
+    events: list[tuple[str, int | None]] = []
+    create_itinerary(travel_info, on_stage=lambda event, count=None: events.append((event, count)))
+
+    assert events == [
+        (STAGE_SEARCH_COMPLETE, 1),
+        (STAGE_PROCESSING_COMPLETE, None),
+        (STAGE_BUILD_COMPLETE, None),
+    ]

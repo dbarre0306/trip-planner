@@ -281,6 +281,39 @@ CSS = """
 .itin-meta-link { font-size: 0.79rem; color: #60a5fa; text-decoration: none; }
 .itin-meta-link:hover { text-decoration: underline; }
 
+/* ── Itinerary generation progress stepper ─────────────── */
+.trip-progress-wrap { display: flex; justify-content: center; padding: 40px 0; }
+.trip-progress {
+    display: flex;
+    flex-direction: column;
+    background: var(--block-background-fill);
+    border: 1px solid rgba(128,128,128,0.2);
+    border-radius: 10px;
+    padding: 24px 32px;
+    min-width: 280px;
+}
+.trip-progress-step { display: flex; align-items: center; gap: 14px; position: relative; padding: 10px 0; }
+.trip-progress-step:not(:last-child)::after {
+    content: ""; position: absolute; left: 11px; top: 34px; bottom: -10px; width: 2px;
+    background: rgba(128,128,128,0.25);
+}
+.trip-progress-step--done:not(:last-child)::after { background: #4ade80; }
+.trip-progress-icon {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; z-index: 1;
+}
+.trip-progress-icon--done { background: #4ade80; color: #0b1a10; }
+.trip-progress-icon--pending { border: 2px solid rgba(128,128,128,0.35); background: transparent; }
+.trip-progress-icon--spinner {
+    border: 2px solid rgba(96,165,250,0.25); border-top-color: #60a5fa;
+    animation: trip-progress-spin 0.8s linear infinite;
+}
+@keyframes trip-progress-spin { to { transform: rotate(360deg); } }
+.trip-progress-label { font-size: 0.92rem; opacity: 0.6; }
+.trip-progress-step--active .trip-progress-label { opacity: 1; font-weight: 600; color: #60a5fa; }
+.trip-progress-step--done .trip-progress-label { opacity: 0.85; }
+
 /* ── Disclaimer banner ─────────────────────────────────── */
 .disclaimer {
     background: rgba(234,179,8,0.1);
