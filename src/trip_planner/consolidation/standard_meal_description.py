@@ -5,11 +5,12 @@ MAX_DESCRIPTION_LENGTH = 300
 _TONE_INSTRUCTION = (
     "Write a single short, fun and imaginative description of this placeholder stop that "
     "would make a traveler smile and look forward to it, even though no specific venue has "
-    "been picked yet. Phrase it as a hypothetical, e.g. start with 'Imagine...' or 'Picture...', "
-    "rather than describing it as if it were a real place that already exists. For example, "
-    "write 'Imagine a delightful lunch stop with a treasure trove of flavors!' rather than "
-    "'Nestled among the lively streets of the city, this delightful lunch stop is a treasure "
-    "trove of flavors!'."
+    "been picked yet. Phrase it as a hypothetical rather than describing it as if it were a "
+    "real place that already exists — for example, write 'Imagine a delightful lunch stop "
+    "with a treasure trove of flavors!' rather than 'Nestled among the lively streets of the "
+    "city, this delightful lunch stop is a treasure trove of flavors!'. Vary the opening word "
+    "or phrase each time instead of always starting with 'Imagine' — mix in openers like "
+    "'Picture', 'Enjoy', 'Savor', 'Treat yourself to', 'Get ready for', or similar."
 )
 _EXCLUSION_INSTRUCTION = (
     "Do not include any URL, website reference, physical address or location, "
