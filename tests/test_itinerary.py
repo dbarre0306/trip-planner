@@ -209,6 +209,72 @@ def test_venue_never_repeats_across_the_trip():
     assert day1_names.count("Only Lunch Spot") + day2_names.count("Only Lunch Spot") == 1
 
 
+def test_duplicate_venue_objects_with_same_name_are_not_both_scheduled():
+    # Simulates two distinct `Venue` objects describing the same real place (e.g. a
+    # duplicate that slipped past the earlier LLM-based duplicate-merging step) — object
+    # identity differs, but the name is the same, so they must still be treated as one venue.
+    first_copy = _venue("Only Lunch Spot", InterestId.RESTAURANTS, tags=["lunch"], rating=5.0)
+    second_copy = _venue("Only Lunch Spot", InterestId.RESTAURANTS, tags=["lunch"], rating=5.0)
+    travel_info = TravelInfo(
+        destination="Tucson, AZ", travel_dates=["2026-09-01", "2026-09-02"], num_adults=2
+    )
+
+    itinerary = assemble_itinerary(travel_info, [first_copy, second_copy])
+
+    day1_names = [v.name for v in itinerary.days[0].venues]
+    day2_names = [v.name for v in itinerary.days[1].venues]
+    assert day1_names.count("Only Lunch Spot") + day2_names.count("Only Lunch Spot") == 1
+
+
+def test_duplicate_venue_used_for_a_meal_is_not_also_scheduled_as_an_activity():
+    # Same real place represented twice: once tagged for lunch, once untagged (activity).
+    lunch_copy = _venue("Popular Bistro", InterestId.RESTAURANTS, tags=["lunch"], rating=5.0)
+    activity_copy = _venue("Popular Bistro", InterestId.MUSEUMS, rating=5.0)
+    travel_info = TravelInfo(
+        destination="Tucson, AZ", travel_dates=["2026-09-01", "2026-09-02"], num_adults=2
+    )
+
+    itinerary = assemble_itinerary(travel_info, [lunch_copy, activity_copy])
+
+    all_names = [v.name for day in itinerary.days for v in day.venues]
+    assert all_names.count("Popular Bistro") == 1
+
+
+def test_standard_placeholder_meal_can_repeat_across_multiple_days():
+    real_breakfast = _venue("Cafe Sunrise", InterestId.COFFEE_SHOPS, tags=["breakfast"], rating=4.0)
+    standard_breakfast = _venue("Breakfast", None, tags=["breakfast"], origin="standard")
+    travel_info = TravelInfo(
+        destination="Tucson, AZ",
+        travel_dates=["2026-09-01", "2026-09-02", "2026-09-03"],
+        num_adults=2,
+    )
+
+    with patch("trip_planner.itinerary.generate_standard_meal_description", return_value="Placeholder"):
+        itinerary = assemble_itinerary(travel_info, [real_breakfast, standard_breakfast])
+
+    day2_breakfast = itinerary.days[1].venues[0]
+    day3_breakfast = itinerary.days[2].venues[0]
+    assert day2_breakfast.name == "Breakfast"
+    assert day3_breakfast.name == "Breakfast"
+
+
+def test_no_venue_reused_when_trip_is_longer_than_the_venue_pool():
+    lunch_spots = [
+        _venue(f"Lunch Spot {i}", InterestId.RESTAURANTS, tags=["lunch"], rating=5.0) for i in range(2)
+    ]
+    travel_info = TravelInfo(
+        destination="Tucson, AZ",
+        travel_dates=["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05"],
+        num_adults=2,
+    )
+
+    itinerary = assemble_itinerary(travel_info, lunch_spots)
+
+    all_names = [v.name for day in itinerary.days for v in day.venues]
+    assert all_names.count("Lunch Spot 0") == 1
+    assert all_names.count("Lunch Spot 1") == 1
+
+
 def test_higher_rated_meal_venue_is_preferred():
     low_rated = _venue("So-so Diner", InterestId.RESTAURANTS, tags=["lunch"], rating=3.0)
     high_rated = _venue("Great Diner", InterestId.RESTAURANTS, tags=["lunch"], rating=4.8)

@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -70,6 +71,16 @@ def _total_cost(venue: Venue, num_adults: int, num_children: int) -> float:
     return per_adult * num_adults + per_child * num_children
 
 
+def _venue_identity(venue: Venue) -> str:
+    """A key identifying the real-world place a venue represents.
+
+    Used to keep the same place from being scheduled on more than one day, even when
+    it's represented by more than one `Venue` object (e.g. a duplicate that slipped
+    past the earlier LLM-based duplicate-merging step).
+    """
+    return re.sub(r"\s+", " ", venue.name).strip().casefold()
+
+
 @dataclass
 class _Segment:
     boundary_end: int
@@ -128,7 +139,7 @@ class _DaySchedule:
 
 def _select_meal_venue(
     pool: list[Venue],
-    used: set[int],
+    used: set[str],
     operating_hours: dict[int, OperatingHours],
     weekday: int | None,
     start_minutes: int,
@@ -137,7 +148,7 @@ def _select_meal_venue(
     candidates = [
         venue
         for venue in pool
-        if id(venue) not in used
+        if _venue_identity(venue) not in used
         and operating_hours[id(venue)].is_available(
             weekday, start_minutes, start_minutes + _duration(venue, meal)
         )
@@ -160,7 +171,7 @@ def _schedule_meal(
     day: _DaySchedule,
     meal: str,
     pool: list[Venue],
-    used: set[int],
+    used: set[str],
     accepted: list[Venue],
     destination: str | None,
     operating_hours: dict[int, OperatingHours],
@@ -170,7 +181,7 @@ def _schedule_meal(
 
     venue = _select_meal_venue(pool, used, operating_hours, weekday, start, meal)
     if venue is not None:
-        used.add(id(venue))
+        used.add(_venue_identity(venue))
     else:
         base = _standard_venue(accepted, meal)
         if base is None:
@@ -199,7 +210,7 @@ def _fill_segment(
     day: _DaySchedule,
     name: str,
     cluster_pool: list[Venue],
-    used: set[int],
+    used: set[str],
     operating_hours: dict[int, OperatingHours],
     weekday: int | None,
 ) -> None:
@@ -209,7 +220,7 @@ def _fill_segment(
         candidates = [
             venue
             for venue in cluster_pool
-            if id(venue) not in used
+            if _venue_identity(venue) not in used
             and cursor + _duration(venue) <= segment.boundary_end
             and operating_hours[id(venue)].is_available(weekday, cursor, cursor + _duration(venue))
         ]
@@ -217,7 +228,7 @@ def _fill_segment(
             break
         chosen = _pick_next_activity(candidates, day.used_interests)
         segment.entries.append((cursor, chosen))
-        used.add(id(chosen))
+        used.add(_venue_identity(chosen))
 
 
 def _try_place(
@@ -244,7 +255,7 @@ def _assemble_day(
     accepted: list[Venue],
     cluster_pool: list[Venue],
     pools: dict[str, list[Venue]],
-    used: set[int],
+    used: set[str],
     operating_hours: dict[int, OperatingHours],
 ) -> _DaySchedule:
     day = _DaySchedule(day_number=day_number, date=date)
@@ -263,7 +274,7 @@ def _assemble_day(
 def _rebalance(
     days: list[_DaySchedule],
     leftover: list[Venue],
-    used: set[int],
+    used: set[str],
     operating_hours: dict[int, OperatingHours],
 ) -> None:
     progress = True
@@ -284,7 +295,7 @@ def _rebalance(
                     _try_place(day, venue, name, operating_hours, weekday)
                     for name in ("seg1", "seg2", "seg3")
                 ):
-                    used.add(id(venue))
+                    used.add(_venue_identity(venue))
                     leftover.remove(venue)
                     progress = True
                     break
@@ -331,7 +342,7 @@ def assemble_itinerary(travel_info: TravelInfo, venues: list[Venue]) -> Itinerar
     num_days = len(travel_info.travel_dates)
     clusters = cluster_venues(activity_pool, num_days)
 
-    used: set[int] = set()
+    used: set[str] = set()
     days: list[_DaySchedule] = []
     for day_number, date in enumerate(travel_info.travel_dates, start=1):
         cluster_pool = clusters[day_number - 1] if day_number - 1 < len(clusters) else []
@@ -340,7 +351,7 @@ def assemble_itinerary(travel_info: TravelInfo, venues: list[Venue]) -> Itinerar
         )
         days.append(day)
 
-    leftover = [venue for venue in activity_pool if id(venue) not in used]
+    leftover = [venue for venue in activity_pool if _venue_identity(venue) not in used]
     _rebalance(days, leftover, used, operating_hours)
 
     return Itinerary(
