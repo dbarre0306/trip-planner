@@ -11,7 +11,7 @@ pinned: false
 
 # TripPlanner
 
-TripPlanner is a trip-planning project that calls the OpenAI API directly via the `openai` SDK to build itineraries. Given a destination, dates, and a set of interests, it searches for venues, enriches each one with an LLM, and produces an itinerary through a Gradio web UI.
+TripPlanner is an itinerary generator project that calls the OpenAI API directly via the `openai` SDK to build itineraries. Given a destination, dates, and a set of interests, it searches for venues, enriches each one with an LLM, and produces an itinerary through a Gradio web UI.
 
 ## Installation
 
