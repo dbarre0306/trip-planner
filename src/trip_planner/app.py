@@ -406,12 +406,13 @@ def build_ui() -> gr.Blocks:
                         '<label>Select from 2 to 4 interests</label>',
                         elem_classes=["interests-label"],
                     )
-                    for key in (CategoryId.FOOD, CategoryId.CULTURE, CategoryId.OUTDOORS, CategoryId.ENTERTAINMENT, CategoryId.OTHER):
-                        interest_components.append(gr.CheckboxGroup(
-                            choices=choices_for(key),
-                            label=_category_by_id[key].label,
-                            elem_classes=["interest-category"],
-                        ))
+                    with gr.Column(elem_classes=["interests-columns"]):
+                        for key in (CategoryId.FOOD, CategoryId.CULTURE, CategoryId.OUTDOORS, CategoryId.ENTERTAINMENT, CategoryId.OTHER):
+                            interest_components.append(gr.CheckboxGroup(
+                                choices=choices_for(key),
+                                label=_category_by_id[key].label,
+                                elem_classes=["interest-category"],
+                            ))
 
             schedule_itinerary_btn = gr.Button("Schedule Itinerary", variant="primary")
 

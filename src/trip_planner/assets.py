@@ -44,12 +44,22 @@ CSS = """
 .field-error textarea {
     border: 1px solid red !important;
 }
+.interests-columns .form {
+    display: block !important;
+    column-width: 220px;
+    column-gap: 32px;
+}
 .interest-category {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
 }
 .interest-category [data-testid="checkbox-group"] label {
     border: none !important;
     box-shadow: none !important;
     padding: 4px 2px !important;
+}
+.interest-category [data-testid="checkbox-group"] {
+    flex-direction: column !important;
 }
 #field-errors * {
     color: #FF6B6B !important;
