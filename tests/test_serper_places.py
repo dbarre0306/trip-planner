@@ -34,6 +34,20 @@ def test_search_places_builds_request(mock_post):
 
 @patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
 @patch("trip_planner.serper_places.requests.post")
+def test_search_places_includes_family_friendly_when_requested(mock_post):
+    mock_post.return_value = _mock_response({"places": []})
+
+    search_places(InterestId.HIKING, "Tucson, AZ", family_friendly=True)
+
+    mock_post.assert_called_once_with(
+        SERPER_PLACES_URL,
+        headers={"X-API-KEY": "test-key", "Content-Type": "application/json"},
+        json={"q": "hiking trails family friendly 'Tucson, AZ'"},
+    )
+
+
+@patch.dict("os.environ", {"SERPER_API_KEY": "test-key"})
+@patch("trip_planner.serper_places.requests.post")
 def test_search_places_maps_full_fields(mock_post):
     mock_post.return_value = _mock_response(
         {

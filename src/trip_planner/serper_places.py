@@ -38,9 +38,13 @@ def get_destination_geo_location(destination: str) -> GeoLocation | None:
     return _get_geo_location(places[0])
 
 
-def search_places(interest_id: InterestId, destination: str) -> list[VenueCandidate]:
+def search_places(
+    interest_id: InterestId, destination: str, *, family_friendly: bool = False
+) -> list[VenueCandidate]:
     interest = find_interest_by_id(interest_id)
     search_text = interest.search_text if interest else ""
+    if family_friendly:
+        search_text = f"{search_text} family friendly"
     places = _get_serper_places(f"{search_text} '{destination}'")
     return [
         VenueCandidate(

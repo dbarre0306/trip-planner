@@ -15,8 +15,11 @@ STAGE_BUILD_COMPLETE = "build_complete"
 
 def get_all_candidates(travel_info: TravelInfo) -> list[VenueCandidate]:
     candidates: list[VenueCandidate] = []
+    family_friendly = travel_info.num_children > 0
     for interest_id in travel_info.interest_ids:
-        candidates.extend(search_places(interest_id, travel_info.destination))
+        candidates.extend(
+            search_places(interest_id, travel_info.destination, family_friendly=family_friendly)
+        )
     return candidates
 
 

@@ -279,7 +279,7 @@ def test_on_schedule_itinerary_yields_validation_errors():
     assert results_panel.get("visible") is False
     assert "Destination is required" in field_errors
     assert results[0][5].get("elem_classes") == ["field-error"]
-    assert results[0][-1].get("value", "") == ""
+    assert results[0][-2].get("value", "") == ""
 
 
 def test_on_schedule_itinerary_flags_interests_group_on_too_few_interests():
@@ -321,8 +321,8 @@ def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_
 
     results_html = results[-1][11]
     assert "Sabino Canyon" in results_html.get("value", "")
-    assert results[-1][-1].get("value", "") == ""
-    assert "trip-progress-step--active" in results[0][-1].get("value", "")
+    assert results[-1][-2].get("value", "") == ""
+    assert "trip-progress-step--active" in results[0][-2].get("value", "")
 
 
 @patch("trip_planner.app.create_itinerary")
@@ -346,7 +346,7 @@ def test_on_schedule_itinerary_advances_stepper_through_stages(
         on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["hiking", "museums"]
     )
 
-    progress_values = [r[-1].get("value", "") for r in results]
+    progress_values = [r[-2].get("value", "") for r in results]
     assert any(
         "trip-progress-step--active" in v and "Researching venues and estimating costs" in v
         for v in progress_values
@@ -366,7 +366,7 @@ def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_
 
     status_md = results[-1][10]
     assert status_md.get("value", "") == ""
-    assert results[-1][-1].get("value", "") == ""
+    assert results[-1][-2].get("value", "") == ""
 
 
 @patch("trip_planner.app.create_itinerary")
@@ -380,7 +380,7 @@ def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is
 
     status_md = results[-1][10]
     assert "No itinerary could be generated" in status_md.get("value", "")
-    assert results[-1][-1].get("value", "") == ""
+    assert results[-1][-2].get("value", "") == ""
 
 
 @patch("trip_planner.app.create_itinerary", side_effect=RuntimeError("boom"))
@@ -393,4 +393,4 @@ def test_on_schedule_itinerary_reports_exception(mock_is_valid, mock_create_itin
     status_md = results[-1][10]
     assert "An error occurred" in status_md.get("value", "")
     assert "boom" in status_md.get("value", "")
-    assert results[-1][-1].get("value", "") == ""
+    assert results[-1][-2].get("value", "") == ""

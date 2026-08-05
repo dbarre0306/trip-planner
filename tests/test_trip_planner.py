@@ -25,8 +25,25 @@ def test_get_all_candidates_queries_once_per_interest(mock_search_places):
     get_all_candidates(travel_info)
 
     assert mock_search_places.call_count == 2
-    mock_search_places.assert_any_call(InterestId.HIKING, "Tucson, AZ")
-    mock_search_places.assert_any_call(InterestId.RESTAURANTS, "Tucson, AZ")
+    mock_search_places.assert_any_call(InterestId.HIKING, "Tucson, AZ", family_friendly=False)
+    mock_search_places.assert_any_call(InterestId.RESTAURANTS, "Tucson, AZ", family_friendly=False)
+
+
+@patch("trip_planner.trip_planner.search_places")
+def test_get_all_candidates_requests_family_friendly_when_children_present(mock_search_places):
+    mock_search_places.return_value = [VenueCandidate(name="Some Venue")]
+    travel_info = TravelInfo(
+        destination="Tucson, AZ",
+        travel_dates=["09/01/2026", "09/02/2026", "09/03/2026"],
+        num_adults=2,
+        num_children=1,
+        interest_ids=[InterestId.HIKING, InterestId.RESTAURANTS],
+    )
+
+    get_all_candidates(travel_info)
+
+    mock_search_places.assert_any_call(InterestId.HIKING, "Tucson, AZ", family_friendly=True)
+    mock_search_places.assert_any_call(InterestId.RESTAURANTS, "Tucson, AZ", family_friendly=True)
 
 
 @patch("trip_planner.trip_planner.search_places")
