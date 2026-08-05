@@ -55,7 +55,7 @@ INTERESTS = [
 
     # Culture
     Interest(InterestId.MUSEUMS, "museums", "Museums", CategoryId.CULTURE),
-    Interest(InterestId.HISTORY, "history", "History", CategoryId.CULTURE),
+    Interest(InterestId.HISTORY, "historical places", "History", CategoryId.CULTURE),
 
     # Entertainment
     Interest(InterestId.LIVE_MUSIC, "live music", "Live music & nightlife", CategoryId.ENTERTAINMENT),
