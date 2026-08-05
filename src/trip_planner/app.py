@@ -427,7 +427,7 @@ def build_ui() -> gr.Blocks:
                                 elem_classes=["interest-category"],
                             ))
 
-            schedule_itinerary_btn = gr.Button("Schedule Itinerary", variant="primary")
+            schedule_itinerary_btn = gr.Button("Create My Itinerary", variant="primary")
 
         # ── Results phase (full-width, shown once planning starts) ──
         with gr.Column(visible=False, elem_classes=["results-panel"]) as results_panel:
