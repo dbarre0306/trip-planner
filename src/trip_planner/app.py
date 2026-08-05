@@ -222,10 +222,17 @@ def _itinerary_to_html(itinerary) -> str:
 #    destination, start_date, num_days, num_adults, num_children,
 #    status_md, results_html]
 #   + interest_components
-#   + [progress_html]
-# = 13 + n_interests items
-# progress_html is appended last (after interest_components) so existing
-# fixed-index positions never shift when it's added.
+#   + [progress_html, schedule_itinerary_btn]
+# = 14 + n_interests items
+# progress_html and schedule_itinerary_btn are appended last (after
+# interest_components) so existing fixed-index positions never shift when
+# they're added.
+# The form's inputs (destination..num_children, interest_components) and the
+# submit button are disabled right when the button is clicked (see the
+# `.then()` chain below) and only re-enabled here on the validation-error
+# path — every other path leaves the form hidden, so re-enabling doesn't
+# matter there; on_confirm_reset/on_confirm_modify re-enable when the form
+# is brought back into view.
 
 async def on_schedule_itinerary(destination, start_date, num_days, num_adults, num_children, *interests):
     errors, err_fields = validate_form(destination, start_date, num_days, num_adults, num_children, list(interests))
@@ -251,15 +258,16 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update()]                                      # summary_html
             + [err_html]                                         # field_errors
             + [gr.update(elem_classes=["interests-outer"] + field_cls("interests"))]  # interests_group
-            + [gr.update(elem_classes=field_cls("destination"))]
-            + [gr.update(elem_classes=field_cls("start_date"))]
-            + [gr.update(elem_classes=field_cls("num_days"))]
-            + [gr.update(elem_classes=field_cls("num_adults"))]
-            + [gr.update(elem_classes=field_cls("num_children"))]
+            + [gr.update(elem_classes=field_cls("destination"), interactive=True)]
+            + [gr.update(elem_classes=field_cls("start_date"), interactive=True)]
+            + [gr.update(elem_classes=field_cls("num_days"), interactive=True)]
+            + [gr.update(elem_classes=field_cls("num_adults"), interactive=True)]
+            + [gr.update(elem_classes=field_cls("num_children"), interactive=True)]
             + [gr.update(value="")]                              # status_md
             + [gr.update(value="")]                              # results_html
-            + [gr.update() for _ in range(n_interests)]
+            + [gr.update(interactive=True) for _ in range(n_interests)]
             + [gr.update(value="")]                              # progress_html
+            + [gr.update(interactive=True)]                      # schedule_itinerary_btn
         )
         return
 
@@ -278,6 +286,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(value="")]                                  # results_html
         + [gr.update() for _ in range(n_interests)]
         + [gr.update(value=_progress_html(0))]                   # progress_html
+        + [gr.update()]                                          # schedule_itinerary_btn
     )
 
     selected_values = [item for group in interests for item in (group or [])]
@@ -323,6 +332,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
                 + [gr.update()]                                  # results_html
                 + [gr.update() for _ in range(n_interests)]
                 + [gr.update(value=_progress_html(active_index))]  # progress_html
+                + [gr.update()]                                  # schedule_itinerary_btn
             )
         itinerary = itinerary_task.result()
     except Exception as exc:
@@ -337,6 +347,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(value="")]
             + [gr.update() for _ in range(n_interests)]
             + [gr.update(value="")]                              # progress_html
+            + [gr.update()]                                      # schedule_itinerary_btn
         )
         return
 
@@ -353,6 +364,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
             + [gr.update(value="")]
             + [gr.update() for _ in range(n_interests)]
             + [gr.update(value="")]                              # progress_html
+            + [gr.update()]                                      # schedule_itinerary_btn
         )
         return
 
@@ -367,6 +379,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
         + [gr.update(value=_itinerary_to_html(itinerary))]      # results_html
         + [gr.update() for _ in range(n_interests)]
         + [gr.update(value="")]                                  # progress_html
+        + [gr.update()]                                          # schedule_itinerary_btn
     )
 
 
@@ -441,9 +454,20 @@ def build_ui() -> gr.Blocks:
             progress_html = gr.HTML(container=False)
 
         n_interests = len(interest_components)
+        form_inputs = [destination, start_date, num_days, num_adults, num_children] + interest_components
 
         # ── Schedule itinerary ────────────────────────────────────
+        # Disable every form input (and the button itself) the instant the
+        # button is clicked, via a queue=False fn that runs ahead of the
+        # (queued, potentially slow) itinerary-generating handler. Re-enabling
+        # happens in on_schedule_itinerary's validation-error path and in
+        # on_confirm_reset/on_confirm_modify, which bring the form back into view.
         schedule_itinerary_btn.click(
+            fn=lambda: [gr.update(interactive=False) for _ in range(len(form_inputs) + 1)],
+            inputs=None,
+            outputs=form_inputs + [schedule_itinerary_btn],
+            queue=False,
+        ).then(
             fn=on_schedule_itinerary,
             inputs=[destination, start_date, num_days, num_adults, num_children] + interest_components,
             outputs=[
@@ -451,7 +475,7 @@ def build_ui() -> gr.Blocks:
                 field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
-            ] + interest_components + [progress_html],
+            ] + interest_components + [progress_html, schedule_itinerary_btn],
             show_progress="hidden",
         )
 
@@ -463,15 +487,16 @@ def build_ui() -> gr.Blocks:
                 + [gr.update(value="")]                   # summary_html
                 + [gr.update(value="")]                   # field_errors
                 + [gr.update(elem_classes=["interests-outer"])]  # interests_group
-                + [gr.update(value="", elem_classes=[])]  # destination
-                + [gr.update(value=None)]                 # start_date
-                + [gr.update(value=1)]                    # num_days
-                + [gr.update(value=1)]                    # num_adults
-                + [gr.update(value=0)]                    # num_children
+                + [gr.update(value="", elem_classes=[], interactive=True)]  # destination
+                + [gr.update(value=None, interactive=True)]                 # start_date
+                + [gr.update(value=1, interactive=True)]                    # num_days
+                + [gr.update(value=1, interactive=True)]                    # num_adults
+                + [gr.update(value=0, interactive=True)]                    # num_children
                 + [gr.update(value="")]                   # status_md
                 + [gr.update(value="")]                   # results_html
-                + [gr.update(value=[]) for _ in range(n_interests)]
+                + [gr.update(value=[], interactive=True) for _ in range(n_interests)]
                 + [gr.update(value="")]                   # progress_html
+                + [gr.update(interactive=True)]           # schedule_itinerary_btn
             )
 
         confirm_reset_btn.click(
@@ -481,7 +506,7 @@ def build_ui() -> gr.Blocks:
                 field_errors, interests_group,
                 destination, start_date, num_days, num_adults, num_children,
                 status_md, results_html,
-            ] + interest_components + [progress_html],
+            ] + interest_components + [progress_html, schedule_itinerary_btn],
         )
 
         # ── "Yes, modify trip" in the HTML confirmation → back to form ───
@@ -489,13 +514,14 @@ def build_ui() -> gr.Blocks:
         # form reappears pre-filled with the trip currently on screen.
         def on_confirm_modify():
             return (
-                gr.update(visible=True),   # form_panel
-                gr.update(visible=False),  # results_panel
+                [gr.update(visible=True)]   # form_panel
+                + [gr.update(visible=False)]  # results_panel
+                + [gr.update(interactive=True) for _ in range(len(form_inputs) + 1)]
             )
 
         confirm_modify_btn.click(
             fn=on_confirm_modify,
-            outputs=[form_panel, results_panel],
+            outputs=[form_panel, results_panel] + form_inputs + [schedule_itinerary_btn],
         )
 
         gr.HTML(
