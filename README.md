@@ -1,6 +1,6 @@
 # TripPlanner
 
-TripPlanner is a trip-planning project that calls the OpenAI API directly via the `openai` SDK to build itineraries.
+TripPlanner is a trip-planning project that calls the OpenAI API directly via the `openai` SDK to build itineraries. Given a destination, dates, and a set of interests, it searches for venues, enriches each one with an LLM, and produces an itinerary through a Gradio web UI.
 
 ## Installation
 
@@ -22,16 +22,16 @@ uv sync
 
 **Add your `OPENAI_API_KEY`, `MODEL`, and `SERPER_API_KEY` into the `.env` file**
 
-- Modify `src/trip_planner/main.py` to customize the trip inputs passed to `create_itinerary`
 - Modify `src/trip_planner/openai_client.py` to change how OpenAI is called
 - Modify `src/trip_planner/trip_planner.py` and `src/trip_planner/venue_processing.py` to change itinerary logic
+- Modify `src/trip_planner/ui.py` to change the Gradio form/results UI
 
 ## Running the Project
 
-To run the trip planner, run this from the root folder of your project:
+To launch the Gradio web UI, run this from the root folder of your project:
 
 ```bash
-uv run trip_planner
+uv run app
 ```
 
 ## Testing

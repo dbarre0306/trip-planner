@@ -4,13 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-A trip-planning project (Python >=3.10,<3.14, managed with `uv`) that calls the OpenAI API directly via the `openai` SDK — no agent/task/crew framework. Given a destination, dates, and a set of interests, it searches for venues, enriches each one (description, hours, duration, cost, meal suitability) via LLM calls, deduplicates them, and produces a list of `Venue`s. A Gradio app (`app.py`) provides a web UI on top of the same pipeline.
+A trip-planning project (Python >=3.10,<3.14, managed with `uv`) that calls the OpenAI API directly via the `openai` SDK — no agent/task/crew framework. Given a destination, dates, and a set of interests, it searches for venues, enriches each one (description, hours, duration, cost, meal suitability) via LLM calls, deduplicates them, and produces a list of `Venue`s. A Gradio app (`app.py`) is the only product surface and provides a web UI on top of the pipeline.
 
 ## Commands
 
 ```bash
 uv sync                              # install/sync dependencies
-uv run trip_planner                  # run the CLI entry point (trip_planner.main:run)
 uv run app                           # launch the Gradio web UI (trip_planner.app:launch)
 uv run pytest                        # run the full test suite
 uv run pytest tests/test_venue_cost.py            # run one test file
@@ -47,7 +46,6 @@ Each enrichment module is independent and owns its own prompt — when changing 
 
 ### Other entry points
 
-- `main.py` — local CLI entry point (`run`), builds a `TravelInfo` and calls `create_itinerary`. Kept free of business logic — it exists only to drive local execution.
 - `app.py` — application entry point (`launch`); builds the UI via `ui.build_ui()` and launches the Gradio server.
 - `ui.py` — the Gradio UI itself: `build_ui()` lays out the form/results Blocks and wires up event handlers, exposing the same `create_itinerary` pipeline through a form; `validation.py` validates form input before submission, `assets.py` holds the UI's CSS/HTML.
 - `knowledge/user_preference.txt` — sample knowledge source content; not currently wired into anything.
