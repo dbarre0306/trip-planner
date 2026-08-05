@@ -1,10 +1,10 @@
 from typing import Callable
 
-from trip_planner.domain import TravelInfo
-from trip_planner.itinerary import assemble_itinerary
-from trip_planner.models import Itinerary, VenueCandidate
-from trip_planner.serper_places import search_places
-from trip_planner.venue_processing import process_venues
+from trip_planner.core.domain import TravelInfo
+from trip_planner.core.models import Itinerary, VenueCandidate
+from trip_planner.enrichment.venue_processing import process_venues
+from trip_planner.scheduling.itinerary import assemble_itinerary
+from trip_planner.search.serper_places import search_places
 
 OnStage = Callable[[str, int | None], None]
 

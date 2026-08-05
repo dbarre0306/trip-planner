@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 
-from trip_planner.assets import CSS, HEAD
-from trip_planner.ui import build_ui
+from trip_planner.ui.assets import CSS, HEAD
+from trip_planner.ui.ui import build_ui
 
 load_dotenv(override=True)
 
