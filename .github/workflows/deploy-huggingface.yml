@@ -1,0 +1,39 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  workflow_dispatch:
+
+env:
+  HF_SPACE: dbarre0306/TripPlanner
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate .env
+        env:
+          MODEL: ${{ vars.MODEL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+        run: |
+          cat > .env <<EOF
+          MODEL=$MODEL
+          OPENAI_API_KEY=$OPENAI_API_KEY
+          SERPER_API_KEY=$SERPER_API_KEY
+          EOF
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f .env
+          git commit -m "Deploy to Hugging Face Spaces" --allow-empty
+          git push --force "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" HEAD:main
