@@ -56,12 +56,14 @@ CSS = """
 }
 
 /* ── Trip summary card ─────────────────────────────────── */
+.results-panel { gap: 8px !important; }
+.trip-summary-html .html-container { padding-bottom: 0 !important; }
+.results-html .html-container { padding-top: 0 !important; }
 .trip-summary {
     background: var(--block-background-fill);
     border: 1px solid rgba(128,128,128,0.2);
     border-radius: 10px;
     padding: 18px 22px;
-    margin-bottom: 12px;
 }
 .trip-summary-header {
     display: flex;
@@ -193,7 +195,7 @@ CSS = """
 }
 
 /* ── Itinerary display ─────────────────────────────────── */
-.itin-wrap { padding: 4px 0 16px; }
+.itin-wrap { padding: 0 0 16px; }
 .itin-total {
     font-size: 1rem;
     font-weight: 600;

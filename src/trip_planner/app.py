@@ -416,11 +416,11 @@ def build_ui() -> gr.Blocks:
             schedule_itinerary_btn = gr.Button("Schedule Itinerary", variant="primary")
 
         # ── Results phase (full-width, shown once planning starts) ──
-        with gr.Column(visible=False) as results_panel:
+        with gr.Column(visible=False, elem_classes=["results-panel"]) as results_panel:
             # summary_html contains the trip card and "Plan a New Trip" button as HTML.
             # Clicking "Yes, start over" in that inline confirmation calls
             # triggerConfirmReset() (HEAD JS), which clicks this hidden Gradio button.
-            summary_html = gr.HTML(container=False)
+            summary_html = gr.HTML(container=False, elem_classes=["trip-summary-html"])
             confirm_reset_btn = gr.Button(
                 "",
                 elem_id="confirm-reset-trigger",
@@ -433,8 +433,10 @@ def build_ui() -> gr.Blocks:
                 elem_id="confirm-modify-trigger",
                 elem_classes=["hidden-trigger"],
             )
-            status_md    = gr.Markdown()
-            results_html = gr.HTML(container=False)
+            # Always empty in practice — kept in the output list of every handler below,
+            # but taken out of flow (like the confirm buttons) so it doesn't add gap.
+            status_md    = gr.Markdown(elem_classes=["hidden-trigger"])
+            results_html = gr.HTML(container=False, elem_classes=["results-html"])
             progress_html = gr.HTML(container=False)
 
         n_interests = len(interest_components)
