@@ -223,7 +223,14 @@ CSS = """
     margin-bottom: 12px;
 }
 .itin-day-label { font-weight: 700; font-size: 1.05rem; color: #60a5fa; }
-.itin-day-cost { font-size: 0.88rem; opacity: 0.65; }
+.itin-day-cost {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+    padding: 3px 10px;
+    border-radius: 999px;
+}
 .itin-card {
     background: var(--block-background-fill);
     border: 1px solid rgba(128,128,128,0.2);
