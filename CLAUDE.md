@@ -48,7 +48,8 @@ Each enrichment module is independent and owns its own prompt — when changing 
 ### Other entry points
 
 - `main.py` — local CLI entry point (`run`), builds a `TravelInfo` and calls `create_itinerary`. Kept free of business logic — it exists only to drive local execution.
-- `app.py` — Gradio UI (`launch`) exposing the same `create_itinerary` pipeline through a form; `validation.py` validates form input before submission, `assets.py` holds the UI's CSS/HTML.
+- `app.py` — application entry point (`launch`); builds the UI via `ui.build_ui()` and launches the Gradio server.
+- `ui.py` — the Gradio UI itself: `build_ui()` lays out the form/results Blocks and wires up event handlers, exposing the same `create_itinerary` pipeline through a form; `validation.py` validates form input before submission, `assets.py` holds the UI's CSS/HTML.
 - `knowledge/user_preference.txt` — sample knowledge source content; not currently wired into anything.
 
 ## Feature workflow

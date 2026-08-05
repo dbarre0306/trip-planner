@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from trip_planner.app import (
+from trip_planner.ui import (
     _fmt_date,
     _itinerary_to_html,
     _progress_html,
@@ -292,7 +292,7 @@ def test_on_schedule_itinerary_flags_interests_group_on_too_few_interests():
     assert results[0][4].get("elem_classes") == ["interests-outer", "field-error"]
 
 
-@patch("trip_planner.app.is_valid_destination", return_value=False)
+@patch("trip_planner.ui.is_valid_destination", return_value=False)
 def test_on_schedule_itinerary_reports_unknown_destination(mock_is_valid):
     results = _run(
         on_schedule_itinerary, "Nowhereville", date(2026, 9, 1), 3, 2, 0, ["hiking", "museums"]
@@ -309,8 +309,8 @@ def test_on_schedule_itinerary_reports_unknown_destination(mock_is_valid):
     assert destination_update.get("elem_classes") == ["field-error"]
 
 
-@patch("trip_planner.app.create_itinerary")
-@patch("trip_planner.app.is_valid_destination", return_value=True)
+@patch("trip_planner.ui.create_itinerary")
+@patch("trip_planner.ui.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_create_itinerary):
     fake_itinerary = _itinerary(days=[_day(venues=[_venue_entry(name="Sabino Canyon")])])
     mock_create_itinerary.return_value = fake_itinerary
@@ -325,12 +325,12 @@ def test_on_schedule_itinerary_renders_successful_itinerary(mock_is_valid, mock_
     assert "trip-progress-step--active" in results[0][-2].get("value", "")
 
 
-@patch("trip_planner.app.create_itinerary")
-@patch("trip_planner.app.is_valid_destination", return_value=True)
+@patch("trip_planner.ui.create_itinerary")
+@patch("trip_planner.ui.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_advances_stepper_through_stages(
     mock_is_valid, mock_create_itinerary, monkeypatch
 ):
-    monkeypatch.setattr("trip_planner.app._POLL_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr("trip_planner.ui._POLL_INTERVAL_SECONDS", 0.01)
 
     def fake_create_itinerary(travel_info, *, on_stage=None):
         on_stage(STAGE_SEARCH_COMPLETE, 1)
@@ -353,8 +353,8 @@ def test_on_schedule_itinerary_advances_stepper_through_stages(
     )
 
 
-@patch("trip_planner.app.create_itinerary")
-@patch("trip_planner.app.is_valid_destination", return_value=True)
+@patch("trip_planner.ui.create_itinerary")
+@patch("trip_planner.ui.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_is_valid, mock_create_itinerary):
     # Regression check: selecting a real interest used to raise AttributeError
     # in _format_interest because Interest had no `examples` field.
@@ -369,8 +369,8 @@ def test_on_schedule_itinerary_handles_selected_interests_without_crashing(mock_
     assert results[-1][-2].get("value", "") == ""
 
 
-@patch("trip_planner.app.create_itinerary")
-@patch("trip_planner.app.is_valid_destination", return_value=True)
+@patch("trip_planner.ui.create_itinerary")
+@patch("trip_planner.ui.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is_valid, mock_create_itinerary):
     mock_create_itinerary.return_value = _itinerary(days=[_day(venues=[])])
 
@@ -383,8 +383,8 @@ def test_on_schedule_itinerary_reports_default_message_when_no_itinerary(mock_is
     assert results[-1][-2].get("value", "") == ""
 
 
-@patch("trip_planner.app.create_itinerary", side_effect=RuntimeError("boom"))
-@patch("trip_planner.app.is_valid_destination", return_value=True)
+@patch("trip_planner.ui.create_itinerary", side_effect=RuntimeError("boom"))
+@patch("trip_planner.ui.is_valid_destination", return_value=True)
 def test_on_schedule_itinerary_reports_exception(mock_is_valid, mock_create_itinerary):
     results = _run(
         on_schedule_itinerary, "Tucson, AZ", date(2026, 9, 1), 3, 2, 0, ["hiking", "museums"]
