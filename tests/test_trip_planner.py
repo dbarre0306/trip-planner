@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
-from trip_planner.domain import InterestId, TravelInfo
-from trip_planner.models import ItineraryDay, Venue, VenueCandidate
+from trip_planner.core.domain import InterestId, TravelInfo
+from trip_planner.core.models import ItineraryDay, Venue, VenueCandidate
 from trip_planner.trip_planner import (
     STAGE_BUILD_COMPLETE,
     STAGE_PROCESSING_COMPLETE,

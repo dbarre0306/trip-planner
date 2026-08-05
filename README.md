@@ -22,9 +22,9 @@ uv sync
 
 **Add your `OPENAI_API_KEY`, `MODEL`, and `SERPER_API_KEY` into the `.env` file**
 
-- Modify `src/trip_planner/openai_client.py` to change how OpenAI is called
-- Modify `src/trip_planner/trip_planner.py` and `src/trip_planner/venue_processing.py` to change itinerary logic
-- Modify `src/trip_planner/ui.py` to change the Gradio form/results UI
+- Modify `src/trip_planner/integrations/openai_client.py` to change how OpenAI is called
+- Modify `src/trip_planner/trip_planner.py` and `src/trip_planner/enrichment/venue_processing.py` to change itinerary logic
+- Modify `src/trip_planner/ui/ui.py` to change the Gradio form/results UI
 
 ## Running the Project
 
