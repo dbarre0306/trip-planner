@@ -52,14 +52,68 @@ CSS = """
 .interest-category {
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
+    --chip-selected-bg: #c9a4f5;
+    --chip-border: rgba(147,51,234,0.3);
 }
-.interest-category [data-testid="checkbox-group"] label {
-    border: none !important;
-    box-shadow: none !important;
-    padding: 4px 2px !important;
+.interest-category [data-testid="block-label"] {
+    color: #27272a !important;
+    font-weight: 700 !important;
 }
 .interest-category [data-testid="checkbox-group"] {
     flex-direction: column !important;
+    align-items: flex-start;
+    gap: 6px !important;
+}
+.interest-category [data-testid="checkbox-group"] label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: 1.5px solid var(--chip-border) !important;
+    border-radius: 999px !important;
+    padding: 6px 14px !important;
+    margin: 0 !important;
+    background: #faf3e6 !important;
+    box-shadow: none !important;
+    color: #27272a !important;
+    font-size: 0.84rem;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease, font-weight 0.15s ease, transform 0.08s ease;
+}
+.interest-category [data-testid="checkbox-group"] label:hover {
+    background: #f3e4fb !important;
+}
+.interest-category [data-testid="checkbox-group"] label:active {
+    transform: scale(0.97);
+}
+.interest-category [data-testid="checkbox-group"] label:has(input:checked) {
+    background: var(--chip-selected-bg) !important;
+    border-color: var(--chip-selected-bg) !important;
+    color: #1a1025 !important;
+    font-weight: 700;
+}
+.interest-category [data-testid="checkbox-group"] label:has(input:checked)::before {
+    content: "✓";
+    margin-right: 5px;
+    font-weight: 700;
+}
+.interest-category [data-testid="checkbox-group"] label:has(input:focus-visible) {
+    outline: 2px solid var(--chip-selected-bg);
+    outline-offset: 2px;
+}
+.interest-category [data-testid="checkbox-group"] label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+}
+.interest-category [data-testid="checkbox-group"] label span {
+    margin: 0 !important;
 }
 #field-errors * {
     color: #FF6B6B !important;
