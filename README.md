@@ -5,7 +5,7 @@ colorFrom: blue
 colorTo: purple
 sdk: gradio
 sdk_version: 6.22.0
-app_file: src/trip_planner/app.py
+app_file: app.py
 pinned: false
 ---
 

@@ -57,9 +57,10 @@ Each enrichment module is independent and owns its own prompt — when changing 
 
 ### Other entry points
 
-- `app.py` — application entry point (`launch`); stays at the top level since it launches the app rather than belonging to one pipeline stage. Builds the UI via `ui/ui.build_ui()` and launches the Gradio server.
+- `src/trip_planner/app.py` — application entry point (`launch`); stays at the top level of the package since it launches the app rather than belonging to one pipeline stage. Builds the UI via `ui/ui.build_ui()` and launches the Gradio server.
 - `ui/ui.py` — the Gradio UI itself: `build_ui()` lays out the form/results Blocks and wires up event handlers, exposing the same `create_itinerary` pipeline through a form; `ui/validation.py` validates form input before submission, `ui/assets.py` holds the UI's CSS/HTML.
 - `knowledge/user_preference.txt` — sample knowledge source content; not currently wired into anything.
+- `app.py` (repo root) — the Hugging Face Space's `app_file`. Puts `src/` on `sys.path` and calls `trip_planner.app.launch`. Exists only because Spaces runs `app_file` as a bare script: if `app_file` pointed at `src/trip_planner/app.py` directly, Python would prepend that directory to `sys.path`, and the sibling `trip_planner.py` module would shadow the `trip_planner` package (`'trip_planner' is not a package`). Keep `app_file` in the README frontmatter pointed at this root shim, not the package-internal one.
 
 ## Feature workflow
 
