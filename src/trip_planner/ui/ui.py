@@ -379,7 +379,7 @@ async def on_schedule_itinerary(destination, start_date, num_days, num_adults, n
 
 def build_ui() -> gr.Blocks:
 
-    with gr.Blocks(title="Trip Planner") as demo:
+    with gr.Blocks(title="Trip Planner", fill_width=True) as demo:
         gr.Markdown("# Trip Planner")
         gr.HTML('<div class="disclaimer">⚠️ This is a demo app only. It should not be used for planning an actual trip. Do so at your own peril.</div>', container=False)
 
